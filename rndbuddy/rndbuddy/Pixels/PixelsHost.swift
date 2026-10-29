@@ -170,7 +170,6 @@ import CoreAudio
         #if os(macOS)
         guard let screen = NSScreen.screens.dropFirst().first else { error = "Connect a second display for visual output."; return }
         showExternal(on: screen, presentation: .fillScreen)
-        return
         #else
         guard let scene = externalScene else { error = "Connect an external display to send Pixels out."; return }
         webView.removeFromSuperview()
