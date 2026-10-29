@@ -99,7 +99,7 @@ struct PerformancePageTests {
         page.placements[.mac] = [stored, Placement(controlID: UUID(), column: 8, row: 0, width: 2, height: 2)]
         let result = PerformanceLayout.flow(page, in: .mac)
         #expect(result.placements.first { $0.controlID == field } == stored)
-        let tracks = result.placements.first { $0.controlID == page.controls[4].id }!
+        let tracks = result.placements.first { $0.controlID == page.controls.first { $0.kind == .tracks }!.id }!
         #expect(tracks.row + tracks.height == LayoutClass.mac.grid.rows)
         let hold = result.placements.first { $0.controlID == page.controls[3].id }!
         #expect(hold.column + hold.width == LayoutClass.mac.grid.columns)

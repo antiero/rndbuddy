@@ -6,13 +6,13 @@ struct StageTrackStrip: View {
         GeometryReader { geometry in
             let compact = geometry.size.height < 52
             HStack(spacing: 8) {
-                ForEach(0..<4, id: \.self) { track in chip(track, compact: compact) }
+                ForEach(0..<4, id: \.self) { track in chip(track, compact: compact, veryCompact: geometry.size.width < 400) }
             }
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Tracks")
     }
-    private func chip(_ track: Int, compact: Bool) -> some View {
+    private func chip(_ track: Int, compact: Bool, veryCompact: Bool = false) -> some View {
         let state = session.snapshot.tracks[track]
         let selected = session.selectedTrack == track
         let colour = Design.stageTracks[track]
@@ -22,7 +22,7 @@ struct StageTrackStrip: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     Text("\(track + 1)\(flags)").font(.callout.monospaced())
-                    if compact { Text(engine).font(.caption).lineLimit(1).foregroundStyle(Design.stageInk.opacity(selected ? 1 : 0.7)) }
+                    if compact && !veryCompact { Text(engine).font(.caption).lineLimit(1).foregroundStyle(Design.stageInk.opacity(selected ? 1 : 0.7)) }
                     Spacer(minLength: 0)
                     Circle().fill(colour.opacity(0.3 + session.activity[track] * 0.7)).frame(width: 7, height: 7)
                 }
@@ -43,7 +43,7 @@ struct StageTrackStrip: View {
         .contextMenu {
             Button(state.muted ? "Unmute" : "Mute", systemImage: "speaker.slash") { session.toggleMute(track) }
             Button(state.soloed ? "Unsolo" : "Solo", systemImage: "headphones") { session.toggleSolo(track) }
-            if session.snapshot.firmware == .jg023 { Button("Reroll", systemImage: "dice") { session.reroll(track) } }
+            if FirmwareCapabilities.supports(.reroll, firmware: session.snapshot.firmware) { Button("Reroll", systemImage: "dice") { session.reroll(track) } }
         }
         .accessibilityLabel("Track \(track + 1), \(state.engine ?? "unknown instrument")\(state.muted ? ", muted" : "")\(state.soloed ? ", solo" : "")")
         .accessibilityAddTraits(selected ? .isSelected : [])
@@ -56,7 +56,14 @@ struct StagePatchBar: View {
         let session = model.session
         GeometryReader { geometry in
             HStack(spacing: 8) {
-                musical
+                if geometry.size.width >= 330 { musical }
+                else {
+                    Menu {
+                        Section("Key") { ForEach(0..<12, id: \.self) { index in Button(RNDProtocolCodec.roots[index]) { session.setRoot(index) } } }
+                        Section("Scale") { ForEach(0..<20, id: \.self) { index in Button(RNDProtocolCodec.scales[index]) { session.setScale(index) } } }
+                        Section("Type") { ForEach(0..<3, id: \.self) { index in Button(["Loop", "Drone", "Jingle"][index]) { session.setType(index) } } }
+                    } label: { Label("Patch", systemImage: "music.note") }.buttonStyle(.plain)
+                }
                 Spacer(minLength: 0)
                 if geometry.size.width > 440 {
                     VStack(alignment: .trailing, spacing: 2) {
@@ -66,13 +73,13 @@ struct StagePatchBar: View {
                 }
                 Button { model.performance.cancel(); session.generate() } label: {
                     Image(systemName: "shuffle").font(.title3.weight(.semibold)).foregroundStyle(.white)
-                        .frame(width: min(64, geometry.size.height - 12), height: min(64, geometry.size.height - 12))
+                        .frame(width: max(44, min(64, geometry.size.height - 12)), height: max(44, min(64, geometry.size.height - 12)))
                         .background(Design.accent, in: .circle)
                         .shadow(color: Design.accent.opacity(0.35), radius: 12, y: 6)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Generate new patch").help("Generate a new RND patch")
-                .disabled(!session.canEdit || session.recalling)
+                .disabled(!session.canEdit || session.recalling || model.editingStage)
             }
             .padding(.leading, 10).padding(.trailing, 6).padding(.vertical, 6)
             .frame(height: min(80, geometry.size.height))
@@ -96,7 +103,7 @@ struct StagePatchBar: View {
         }
         .menuIndicator(.hidden)
         .buttonStyle(.plain)
-        .disabled(!session.canEdit || session.recalling)
+        .disabled(!session.canEdit || session.recalling || model.editingStage)
     }
     private func pill(_ text: String, mono: Bool = false) -> some View {
         Text(text).font(mono ? .callout.monospaced() : .callout).lineLimit(1)
@@ -111,7 +118,7 @@ struct HandsTile: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             if model.hands.running {
-                CameraPreview(session: model.hands.captureSession, portrait: model.hands.portrait).accessibilityHidden(true)
+                HandsBackdrop(model: model).accessibilityHidden(true)
             } else {
                 Color.black.opacity(0.4)
             }
@@ -119,11 +126,13 @@ struct HandsTile: View {
                 Circle().fill(model.performance.armed ? Design.accent : .secondary).frame(width: 7, height: 7)
                 Text(model.performance.armed ? "Hands armed" : "Hands").font(.caption.weight(.semibold))
                 Spacer()
+                Button("Expand Camera", systemImage: "arrow.up.left.and.arrow.down.right") { model.presentStage(.hands) }
+                    .labelStyle(.iconOnly).buttonStyle(.plain).frame(width: 44, height: 44)
                 Button(model.performance.armed ? "Disarm" : "Arm", systemImage: model.performance.armed ? "stop.circle" : "hand.raised") {
-                    if model.performance.method != .hands { model.changeInput(.hands) }
+                    if model.performance.method != .hands { model.performance.method = .hands }
                     model.arm(!model.performance.armed)
                 }
-                .labelStyle(.iconOnly).buttonStyle(.plain).frame(width: 32, height: 32)
+                .labelStyle(.iconOnly).buttonStyle(.plain).frame(width: 44, height: 44)
             }
             .padding(.leading, 10).padding(.trailing, 4).padding(.top, 4)
             if let error = model.hands.error {

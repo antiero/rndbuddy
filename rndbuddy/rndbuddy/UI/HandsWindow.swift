@@ -13,9 +13,10 @@ struct HandsControls: View {
             HStack {
                 Toggle("Preview", isOn: $model.showCameraPreview).toggleStyle(.button)
                     .help("Hide the preview while keeping hand tracking active")
+                Button("Expand Camera", systemImage: "arrow.up.left.and.arrow.down.right") { model.presentStage(.hands) }
                 Spacer()
                 Button(model.performance.armed && model.performance.method == .hands ? "Disarm Hands" : "Arm Hands") {
-                    if model.performance.method != .hands { model.changeInput(.hands) }
+                    if model.performance.method != .hands { model.performance.method = .hands }
                     model.arm(!model.performance.armed)
                 }.buttonStyle(.borderedProminent)
             }

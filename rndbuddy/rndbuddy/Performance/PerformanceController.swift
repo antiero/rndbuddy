@@ -12,10 +12,11 @@ struct Contact: Identifiable, Equatable, Sendable { let id: String; var x: Doubl
 /// control to send a CC owns that CC until another control sends it.
 @MainActor @Observable final class PerformanceController {
     let session: DeviceSession
+    var editing = false
     var mode = PerformanceMode.modulate { didSet { cancel(); held = false } }
     var method = InputMethod.touch { didSet { cancel(); held = false; armed = false } }
     var pages = PerformancePage.defaults
-    var pageIndex = 0 { didSet { if pageIndex != oldValue { cancel() } } }
+    var pageIndex = 0 { didSet { if pageIndex != oldValue { cancel() }; if pages.indices.contains(pageIndex) { UserDefaults.standard.set(page.id.uuidString, forKey: "rndbuddy.selectedPage") } } }
     var held = false { didSet { if oldValue && !held { cancel() } } }
     var armed = false { didSet { if !armed { cancel() } } }
     /// Live contacts per control, for drawing.
@@ -23,6 +24,11 @@ struct Contact: Identifiable, Equatable, Sendable { let id: String; var x: Doubl
     private(set) var faderValues: [UUID: Double] = [:]
     private(set) var pressedKeys: [UUID: Set<Int>] = [:]
     private(set) var toggled: Set<UUID> = []
+    private var gestureOrder: [String: Int] = [:]
+    private var sequence = 0
+    private var sendingSource = InputSource.touch
+    private var sensorControls: Set<UUID> = []
+    private var contactSources: [UUID: InputSource] = [:]
     private var owners: [String: UUID] = [:]
     private var engine = MappingEngine()
     private var activeIDs: [UUID: Set<String>] = [:]
@@ -71,7 +77,7 @@ struct Contact: Identifiable, Equatable, Sendable { let id: String; var x: Doubl
         return nil
     }
     private func control(_ id: UUID) -> ControlSpec? { page.controls.first { $0.id == id } }
-    private func source(_ control: UUID, _ contact: String) -> String { "\(control.uuidString.prefix(8))-\(contact)" }
+    private func source(_ control: UUID, _ contact: String) -> String { "\(control.uuidString)-\(contact)" }
 
     // MARK: Fields
 
@@ -81,6 +87,9 @@ struct Contact: Identifiable, Equatable, Sendable { let id: String; var x: Doubl
         update(field.id, incoming, sensor: sensor)
     }
     func update(_ id: UUID, _ incoming: [Contact], sensor: Bool = false) {
+        guard !editing else { return }
+        sendingSource = sensor ? (method == .motion ? .motion : .hands) : .touch
+        if incoming.isEmpty { endGesture(id, source: sendingSource) } else { beginGesture(id, source: sendingSource) }
         if sensor {
             lastSensor = incoming
             guard armed, !touchOwns.contains(id) else { return }
@@ -88,12 +97,13 @@ struct Contact: Identifiable, Equatable, Sendable { let id: String; var x: Doubl
         if sensor && incoming.isEmpty { apply([], to: id); return }
         guard !held else { return }
         apply(incoming, to: id)
-        if !sensor && incoming.isEmpty && armed && id == primaryField?.id { apply(lastSensor, to: id) }
     }
     private func apply(_ incoming: [Contact], to id: UUID) {
         guard let control = control(id) else { return }
+        guard !incoming.isEmpty || contactSources[id] == sendingSource else { return }
         let limited = Array(incoming.prefix(4))
-        let sources = limited.map { source(id, $0.id) }
+        contactSources[id] = limited.isEmpty ? nil : sendingSource
+        let sources = limited.map { source(id, "\(sendingSource.rawValue)-\($0.id)") }
         for gone in activeIDs[id, default: []].subtracting(sources) { session.note(source: gone, note: nil, track: session.selectedTrack) }
         activeIDs[id] = sources.isEmpty ? nil : Set(sources)
         touches[id] = limited.isEmpty ? nil : limited
@@ -114,8 +124,16 @@ struct Contact: Identifiable, Equatable, Sendable { let id: String; var x: Doubl
     }
     private func send(_ control: ControlSpec, binding index: Int, input: Double) {
         let binding = control.bindings[index]
+        guard !editing, binding.sources.contains(sendingSource) || sendingSource == .touch else { return }
+        let gesture = gestureKey(control.id, sendingSource)
+        beginGesture(control.id, source: sendingSource)
+        let (resolvedCC, resolvedChannel) = binding.control(selectedTrack: session.selectedTrack)
+        let target = "\(resolvedCC)/\(resolvedChannel)"
+        if let owner = targetGestures[target], owner != gesture,
+           let rank = gestureOrder[owner], rank > gestureOrder[gesture, default: 0] { return }
+        targetGestures[target] = gesture
         guard FirmwareCapabilities.supports(binding.target, firmware: session.snapshot.firmware),
-              let value = engine.value(mapped: binding.mapped(input), key: "\(control.id)#\(index)", smoothing: binding.axis.smoothing, deadZone: binding.axis.deadZone)
+              let value = engine.value(mapped: binding.mapped(input), key: "\(control.id)#\(index)#\(sendingSource.rawValue)", smoothing: binding.axis.smoothing, deadZone: binding.axis.deadZone)
         else { return }
         let (cc, channel) = binding.control(selectedTrack: session.selectedTrack)
         owners["\(cc)/\(channel)"] = control.id
@@ -126,7 +144,9 @@ struct Contact: Identifiable, Equatable, Sendable { let id: String; var x: Doubl
 
     /// `nil` ends the gesture. A held fader keeps showing its last value.
     func setFader(_ id: UUID, value: Double?) {
-        guard let control = control(id), control.bindings.count == 1 else { return }
+        guard !editing, let control = control(id), control.bindings.count == 1 else { return }
+        sendingSource = .touch
+        if value == nil { endGesture(id, source: .touch) } else { beginGesture(id, source: .touch) }
         guard let value else { if !held { faderValues[id] = nil }; return }
         guard !held else { return }
         faderValues[id] = value.clamped(0...1)
@@ -152,7 +172,7 @@ struct Contact: Identifiable, Equatable, Sendable { let id: String; var x: Doubl
         }
     }
     func toggle(_ id: UUID) {
-        guard let control = control(id), let binding = control.bindings.first, session.canEdit,
+        guard !editing, let control = control(id), let binding = control.bindings.first, session.canEdit,
               FirmwareCapabilities.supports(binding.target, firmware: session.snapshot.firmware) else { return }
         let on = !toggled.contains(id)
         if on { toggled.insert(id) } else { toggled.remove(id) }
@@ -161,7 +181,7 @@ struct Contact: Identifiable, Equatable, Sendable { let id: String; var x: Doubl
         session.setControl(cc, value: Int((binding.mapped(on ? 1 : 0) * 127).rounded()), channel: channel)
     }
     func trigger(_ control: ControlSpec) {
-        guard let action = control.action, FirmwareCapabilities.supports(action, firmware: session.snapshot.firmware) else { return }
+        guard !editing, let action = control.action, FirmwareCapabilities.supports(action, firmware: session.snapshot.firmware) else { return }
         let track = session.selectedTrack
         switch action {
         case .hold: held.toggle()
@@ -193,7 +213,7 @@ struct Contact: Identifiable, Equatable, Sendable { let id: String; var x: Doubl
             if activeIDs[id]?.remove(source) != nil { session.note(source: source, note: nil, track: session.selectedTrack) }
             return
         }
-        guard mode == .play, session.canEdit else { return }
+        guard !editing, mode == .play, session.canEdit else { return }
         pressedKeys[id, default: []].insert(degree)
         let snapshot = session.snapshot
         let note = RNDProtocolCodec.degreeNote(degree, root: snapshot.root ?? 0, scale: snapshot.scale ?? 0, octave: snapshot.octave)
@@ -228,6 +248,61 @@ struct Contact: Identifiable, Equatable, Sendable { let id: String; var x: Doubl
         restorePlayVolume()
         activeIDs.removeAll(); touches.removeAll(); faderValues.removeAll(); pressedKeys.removeAll()
         lastSensor = []; engine.reset(); touchOwns.removeAll()
+        gestureOrder.removeAll(); targetGestures.removeAll(); owners.removeAll(); sensorControls.removeAll(); contactSources.removeAll()
+    }
+    private var targetGestures: [String: String] = [:]
+    private func gestureKey(_ id: UUID, _ source: InputSource) -> String { "\(id)/\(source.rawValue)" }
+    private func beginGesture(_ id: UUID, source: InputSource) {
+        let key = gestureKey(id, source)
+        if gestureOrder[key] == nil { sequence += 1; gestureOrder[key] = sequence }
+    }
+    private func endGesture(_ id: UUID, source: InputSource) {
+        let key = gestureKey(id, source)
+        gestureOrder[key] = nil
+        let targets = targetGestures.filter { $0.value == key }.map(\.key)
+        for target in targets { targetGestures[target] = nil; owners[target] = nil }
+    }
+    func cancelTouches() {
+        sendingSource = .touch
+        for id in Array(touches.keys) where contactSources[id] == .touch { apply([], to: id); endGesture(id, source: .touch) }
+        for id in Array(faderValues.keys) { setFader(id, value: nil) }
+        for (id, degrees) in pressedKeys { for degree in degrees { key(id, degree: degree, down: false) } }
+        touchOwns.removeAll()
+    }
+    func updateSensor(_ contacts: [Contact], source: InputSource) {
+        guard armed, !editing else { return }
+        sendingSource = source
+        for control in page.controls where control.kind == .xy || control.kind == .fader {
+            guard control.bindings.contains(where: { $0.sources.contains(source) }) else { continue }
+            if contacts.isEmpty {
+                endGesture(control.id, source: source)
+                if sensorControls.remove(control.id) != nil { apply([], to: control.id) }
+            } else if !touchOwns.contains(control.id) {
+                beginGesture(control.id, source: source); sensorControls.insert(control.id)
+                if control.kind == .xy { apply(contacts, to: control.id) }
+                else if let first = contacts.first { send(control, binding: 0, input: 1 - first.y) }
+            }
+        }
+        if source == .motion && contacts.isEmpty { updateFeatures([:], motion: true) }
+        if source == .motion, let contact = contacts.first {
+            updateFeatures([.motionRoll: contact.x, .motionPitch: 1 - contact.y], motion: true)
+        }
+    }
+    func updateFeatures(_ values: [InputSource: Double], motion: Bool = false) {
+        guard armed, !editing else { return }
+        let features = InputSource.allCases.filter { ![.touch, .hands, .motion, .keys].contains($0) }
+        for control in page.controls {
+            for (index, binding) in control.bindings.enumerated() {
+                for feature in features where binding.sources.contains(feature) {
+                    if let value = values[feature] {
+                        sendingSource = feature; beginGesture(control.id, source: feature)
+                        send(control, binding: index, input: value)
+                    } else if feature.rawValue.hasPrefix("motion") == motion {
+                        endGesture(control.id, source: feature)
+                    }
+                }
+            }
+        }
     }
     func background() { armed = false; held = false; cancel(); session.releaseAll() }
 }

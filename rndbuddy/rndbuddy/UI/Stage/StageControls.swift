@@ -31,18 +31,20 @@ enum StageText {
 /// Shared surface for stage controls: scrim in Show, dashed outline in Ghost, track-coloured edge while active.
 struct StageSurface: ViewModifier {
     @Environment(\.stageGhost) private var ghost
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var active = false
     var tint = Design.stageInk
     var radius: CGFloat = 16
     func body(content: Content) -> some View {
         content
-            .background(ghost ? Color.clear : Design.scrim, in: .rect(cornerRadius: radius))
+            .background(ghost && !active ? Color.clear : Design.scrim, in: .rect(cornerRadius: radius))
             .overlay {
                 RoundedRectangle(cornerRadius: radius)
                     .strokeBorder(active ? tint : Design.stageLine, style: StrokeStyle(lineWidth: active ? 1.5 : 1, dash: ghost && !active ? [5, 4] : []))
             }
             .shadow(color: active ? tint.opacity(0.35) : .clear, radius: 14)
             .opacity(ghost && !active ? 0.5 : 1)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: active)
     }
 }
 extension View {
@@ -92,6 +94,8 @@ struct FaderControl: View {
             performance.setFader(control.id, value: nil)
         }
         .help(StageText.label(binding, selected: model.session.selectedTrack))
+        .opacity(performance.isOverridden(control) ? 0.55 : 1)
+        .accessibilityHint(performance.isOverridden(control) ? "Overridden by another control" : "")
     }
     @ViewBuilder private func labels(vertical: Bool, value: Int?) -> some View {
         let text = Text(value.map(String.init) ?? "—").font(.caption.monospacedDigit())

@@ -47,6 +47,15 @@ struct PerformanceLayout: Equatable, Sendable {
         case .patchBar: return (min(c, 8), r >= 10 ? 2 : 1)
         }
     }
+    static func minimumSize(_ kind: ControlKind) -> (width: Int, height: Int) {
+        switch kind {
+        case .xy, .keys: (4, 3)
+        case .fader: (1, 3)
+        case .tracks, .patchBar: (4, 1)
+        case .camera: (3, 2)
+        case .trigger, .toggle: (2, 1)
+        }
+    }
     private static func place(_ control: ControlSpec, grid: (columns: Int, rows: Int), taken: [Placement]) -> Placement? {
         let preferred = preferredSize(control.kind, grid: grid)
         // Shrink height first, then width, before giving up.
@@ -54,7 +63,8 @@ struct PerformanceLayout: Equatable, Sendable {
         for w in stride(from: min(preferred.width, grid.columns), through: 1, by: -1) {
             for h in stride(from: min(preferred.height, grid.rows), through: 1, by: -1) { sizes.append((w, h)) }
         }
-        for (w, h) in sizes {
+        let minimum = minimumSize(control.kind)
+        for (w, h) in sizes where w >= minimum.width && h >= minimum.height {
             var candidates: [Placement] = []
             for row in 0...(grid.rows - h) {
                 for column in 0...(grid.columns - w) {

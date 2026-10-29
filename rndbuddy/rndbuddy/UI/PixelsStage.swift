@@ -10,7 +10,7 @@ struct PixelsStage: View {
         ZStack {
             Design.panel(scheme)
             if model.pixels.permission && !model.pixels.external && !model.pixels.fullScreen {
-                PixelsWebView(host: model.pixels)
+                PixelsWebView(host: model.pixels).accessibilityHidden(true)
                 if model.pixels.loading { ProgressView().padding(16).background(.regularMaterial, in: .capsule) }
             } else {
                 DotSculpture(activity: model.session.activity).opacity(0.08)
@@ -72,7 +72,7 @@ struct DotSculpture: View {
 struct PixelsMenuItems: View {
     @Bindable var model: AppModel
     var body: some View {
-        Button("Full Screen",systemImage:"arrow.up.left.and.arrow.down.right") { if model.pixels.external { model.pixels.returnToApp() }; model.pixels.fullScreen = true }
+        Button("Full Screen",systemImage:"arrow.up.left.and.arrow.down.right") { if model.pixels.external { model.pixels.returnToApp() }; model.presentStage(.normal); model.pixels.fullScreen = true }
         #if os(macOS)
         if model.pixels.external {
             Button("Fill External Screen", systemImage: "arrow.up.left.and.arrow.down.right") { model.pixels.setExternalPresentation(.fillScreen) }

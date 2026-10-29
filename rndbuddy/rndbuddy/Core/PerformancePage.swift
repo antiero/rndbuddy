@@ -19,7 +19,7 @@ enum ResponseCurve: String, Codable, CaseIterable, Sendable {
 }
 enum TriggerAction: String, Codable, CaseIterable, Sendable { case generate, hold, freeze, reroll, mute, solo }
 /// Inputs that may drive a binding. Hands and motion supply the binding's own axis; finer hand features come later.
-enum InputSource: String, Codable, CaseIterable, Sendable { case touch, hands, motion, keys }
+enum InputSource: String, Codable, CaseIterable, Sendable { case touch, hands, motion, keys, rightPalmX, rightPalmY, leftPalmX, leftPalmY, rightHeight, leftHeight, rightPinch, leftPinch, motionPitch, motionRoll }
 
 struct ControlBinding: Codable, Equatable, Sendable {
     var target: MappingTarget
@@ -126,6 +126,10 @@ struct PerformancePage: Codable, Identifiable, Equatable, Sendable {
         }
         let ids = Set(controls.map(\.id))
         for (layout, list) in placements {
+            guard Set(list.map(\.controlID)).count == list.count else { throw PageError.invalid("Duplicate placement") }
+            for (index, placement) in list.enumerated() {
+                guard !list.dropFirst(index + 1).contains(where: { placement.overlaps($0) }) else { throw PageError.invalid("Overlapping placement") }
+            }
             let grid = layout.grid
             for placement in list where !ids.contains(placement.controlID) || placement.width < 1 || placement.height < 1
                 || placement.column < 0 || placement.row < 0 || placement.column + placement.width > grid.columns || placement.row + placement.height > grid.rows {
@@ -143,6 +147,9 @@ extension PerformancePage {
             ControlSpec(kind: .fader, title: "Vol", bindings: [ControlBinding(.masterVolume)]),
             ControlSpec(kind: .fader, title: "Verb", bindings: [ControlBinding(.masterReverb)]),
             ControlSpec(kind: .trigger, title: "Hold", action: .hold),
+            ControlSpec(kind: .trigger, title: "Freeze", action: .freeze),
+            ControlSpec(kind: .trigger, title: "Reroll", action: .reroll),
+            ControlSpec(kind: .trigger, title: "Mute", action: .mute),
             ControlSpec(kind: .tracks, title: "Tracks"),
             ControlSpec(kind: .patchBar, title: "Patch"),
         ])
@@ -167,7 +174,7 @@ extension PerformancePage {
             ControlSpec(kind: .patchBar, title: "Patch"),
         ])
     }
-    static var defaults: [PerformancePage] { [drift(), swell(), keys()] }
+    static var defaults: [PerformancePage] { [drift().withStagePlacements(), swell().withStagePlacements(), keys().withStagePlacements()] }
     /// One page per saved mapping when migrating the library.
     init(legacy mapping: PerformanceMapping, name: String) {
         self = .drift(mapping); self.name = name

@@ -4,6 +4,8 @@ import SwiftUI
 struct PerformanceLayer: View {
     @Bindable var model: AppModel
     let layout: LayoutClass
+    var editor: StageEditor?
+    @State private var showOverflow = false
     /// Swallow touches between controls so stray taps don't reach Pixels.
     var blocksBackground = true
     var body: some View {
@@ -13,21 +15,51 @@ struct PerformanceLayer: View {
         GeometryReader { geometry in
             let cell = CGSize(width: geometry.size.width / CGFloat(grid.columns), height: geometry.size.height / CGFloat(grid.rows))
             ZStack(alignment: .topLeading) {
-                if blocksBackground { Color.clear.contentShape(.rect) }
-                ForEach(flow.placements, id: \.controlID) { placement in
+                if blocksBackground { Color.clear.contentShape(.rect).gesture(DragGesture(minimumDistance: 0).onChanged { _ in }).accessibilityHidden(true) }
+                ForEach(flow.placements.filter { placement in
+                    let rect = frame(placement, cell: cell, kind: page.controls.first { $0.id == placement.controlID }?.kind ?? .trigger)
+                    return rect.width >= 44 && rect.height >= 44
+                }, id: \.controlID) { placement in
                     if let control = page.controls.first(where: { $0.id == placement.controlID }) {
                         let frame = frame(placement, cell: cell, kind: control.kind)
-                        StageControlView(model: model, control: control)
+                        ZStack {
+                            StageControlView(model: model, control: control).allowsHitTesting(!model.editingStage)
+                            if model.editingStage, let editor {
+                                EditControlOverlay(model: model, editor: editor, control: control, placement: placement, cell: cell)
+                            }
+                        }
                             .frame(width: frame.width, height: frame.height)
                             .offset(x: frame.minX, y: frame.minY)
                     }
+                }
+            }
+            .overlay(alignment: .bottomTrailing) {
+                let hidden = flow.overflow + flow.placements.filter { placement in
+                    let rect = frame(placement, cell: cell, kind: page.controls.first { $0.id == placement.controlID }?.kind ?? .trigger)
+                    return rect.width < 44 || rect.height < 44
+                }.map(\.controlID)
+                if !hidden.isEmpty {
+                    Button("More Controls", systemImage: "ellipsis.circle") { showOverflow = true }
+                        .labelStyle(.iconOnly).frame(width: 44, height: 44).background(.regularMaterial, in: .circle)
+                        .sheet(isPresented: $showOverflow) {
+                            NavigationStack {
+                                ScrollView {
+                                    VStack(spacing: 16) {
+                                        ForEach(page.controls.filter { hidden.contains($0.id) }) { control in
+                                            StageControlView(model: model, control: control).disabled(model.editingStage).frame(minHeight: control.kind == .xy || control.kind == .keys ? 220 : 80)
+                                        }
+                                    }.padding()
+                                }.navigationTitle("More controls")
+                                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showOverflow = false } } }
+                            }
+                        }
                 }
             }
         }
         .id(page.id)
     }
     private func frame(_ placement: Placement, cell: CGSize, kind: ControlKind) -> CGRect {
-        let gap: CGFloat = 10
+        let gap: CGFloat = 6
         var rect = CGRect(x: CGFloat(placement.column) * cell.width, y: CGFloat(placement.row) * cell.height,
                           width: CGFloat(placement.width) * cell.width, height: CGFloat(placement.height) * cell.height)
             .insetBy(dx: gap / 2, dy: gap / 2)
