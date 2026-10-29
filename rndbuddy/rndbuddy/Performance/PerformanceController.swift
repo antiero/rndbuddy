@@ -99,7 +99,7 @@ struct Contact: Identifiable, Equatable, Sendable { let id: String; var x: Doubl
         apply(incoming, to: id)
     }
     private func apply(_ incoming: [Contact], to id: UUID) {
-        guard let control = control(id) else { return }
+        guard !held || incoming.isEmpty, let control = control(id) else { return }
         guard !incoming.isEmpty || contactSources[id] == sendingSource else { return }
         let limited = Array(incoming.prefix(4))
         contactSources[id] = limited.isEmpty ? nil : sendingSource
@@ -124,7 +124,7 @@ struct Contact: Identifiable, Equatable, Sendable { let id: String; var x: Doubl
     }
     private func send(_ control: ControlSpec, binding index: Int, input: Double) {
         let binding = control.bindings[index]
-        guard !editing, binding.sources.contains(sendingSource) || sendingSource == .touch else { return }
+        guard !held, !editing, binding.sources.contains(sendingSource) || sendingSource == .touch else { return }
         let gesture = gestureKey(control.id, sendingSource)
         beginGesture(control.id, source: sendingSource)
         let (resolvedCC, resolvedChannel) = binding.control(selectedTrack: session.selectedTrack)

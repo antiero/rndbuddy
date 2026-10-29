@@ -24,7 +24,7 @@ struct PixelsStage: View {
                         Text("Visuals by cyma forma").font(.caption).foregroundStyle(.secondary)
                         Button("Enable Pixels", systemImage: "sparkles") { model.pixels.allow() }.buttonStyle(.borderedProminent)
                             .help("Allow the Pixels website to exchange MIDI and SysEx with your selected RND")
-                        if !model.session.connected && !model.session.demo { Button("Explore Demo") { model.session.startDemo() }.buttonStyle(.plain).padding(.top,4) }
+                        if !model.session.connected && !model.session.demo { Button("Explore Demo") { model.startPixelsDemo() }.buttonStyle(.plain).padding(.top,4) }
                     }
                 }.padding(24)
             }

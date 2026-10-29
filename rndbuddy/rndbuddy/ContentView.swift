@@ -22,11 +22,7 @@ struct ContentView: View {
                 }.navigationSplitViewColumnWidth(min: 150, ideal: 180, max: 220)
             } detail: { destination } }
             #else
-            TabView(selection: $model.destination) {
-                Tab("Perform", systemImage: "slider.horizontal.3", value: AppDestination.perform) { NavigationStack { performance } }
-                Tab("Library", systemImage: "square.stack", value: AppDestination.library) { NavigationStack { LibraryView(model: model) } }
-                Tab("Settings", systemImage: "gearshape", value: AppDestination.settings) { NavigationStack { SettingsView(model: model) } }
-            }.tabViewStyle(.sidebarAdaptable)
+            appTabs.tabViewStyle(.tabBarOnly)
             #endif
         }
         .background(Design.background(scheme))
@@ -57,11 +53,22 @@ struct ContentView: View {
         #endif
         .onChange(of: phase) { _, phase in if phase == .background { model.background() } else { model.library?.reload() } }
         .onChange(of: model.session.connectedID) { _, _ in model.background(); model.audio.stop() }
+        .onChange(of: model.destination) { _, destination in if destination != .perform { model.background() } }
+        .onChange(of: model.performance.pageIndex) { _, _ in if model.performance.armed { model.arm(true) } }
         .onChange(of: model.session.selectedTrack) { _, _ in model.performance.cancel(); model.session.releaseAll() }
         .alert("rndbuddy", isPresented: Binding(get: { model.session.error != nil || model.stageError != nil }, set: { if !$0 { model.session.error = nil; model.stageError = nil } })) {
             Button("OK") { model.session.error = nil; model.stageError = nil }
         } message: { Text(model.session.error ?? model.stageError ?? "") }
     }
+    #if os(iOS)
+    private var appTabs: some View {
+        TabView(selection: $model.destination) {
+            Tab("Perform", systemImage: "slider.horizontal.3", value: AppDestination.perform) { NavigationStack { performance } }
+            Tab("Library", systemImage: "square.stack", value: AppDestination.library) { NavigationStack { LibraryView(model: model) } }
+            Tab("Settings", systemImage: "gearshape", value: AppDestination.settings) { NavigationStack { SettingsView(model: model) } }
+        }
+    }
+    #endif
     @ViewBuilder private var destination: some View {
         switch model.destination {
         case .perform: performance
@@ -90,11 +97,17 @@ struct ContentView: View {
                 ToolbarItem(placement: .automatic) { Button("Edit Layout", systemImage: "pencil") { model.editingStage = true } }
                 ToolbarItemGroup(placement: .automatic) {
                     if !model.stageSplit {
+                        #if os(macOS)
+                        Picker("Overlay", selection: $model.overlay) {
+                            ForEach(OverlayVisibility.allCases) { Text($0.rawValue).tag($0) }
+                        }.pickerStyle(.segmented).fixedSize().help("Show, ghost or hide the controls over the visuals")
+                        #else
                         Menu("Overlay", systemImage: model.overlay == .off ? "square.3.layers.3d.slash" : "square.3.layers.3d") {
                             Picker("Controls over visuals", selection: $model.overlay) {
                                 ForEach(OverlayVisibility.allCases) { Text($0.rawValue).tag($0) }
                             }.pickerStyle(.inline)
                         }.help("Show, ghost or hide the controls over the visuals")
+                        #endif
                     }
                     PerformanceMenu(model: model)
                     if compact {
@@ -147,7 +160,7 @@ struct PerformanceMenu: View {
         let performance = model.performance
         Menu("Performance", systemImage: performance.armed ? "hand.raised.fill" : "hand.raised") {
             Picker("Field", selection: Binding(get: { performance.mode }, set: { mode in
-                if mode == .play { model.showTakeover = true } else { performance.mode = mode }
+                if mode == .play { model.requestPlay() } else { performance.mode = mode }
             })) { ForEach(PerformanceMode.allCases, id: \.self) { Text($0.rawValue).tag($0) } }
             Button(performance.armed ? "Disarm Sensors" : "Arm Sensors", systemImage: performance.armed ? "stop.circle" : "hand.raised") { model.arm(!performance.armed) }
             if model.motion.available { Button("Calibrate Motion", systemImage: "scope") { model.motion.calibrate() } }

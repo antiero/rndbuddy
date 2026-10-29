@@ -15,7 +15,7 @@ import UniformTypeIdentifiers
         guard !pages.isEmpty, pages.count <= 1_000 else { model.stageError = "A library can contain 1 to 1,000 pages."; return }
         do {
             for page in pages { try page.validate() }
-            undoStack.append(model.performance.pages); redoStack.removeAll()
+            undoStack.append(model.performance.pages); if undoStack.count > 50 { undoStack.removeFirst() }; redoStack.removeAll()
             model.performance.pages = pages
             model.performance.pageIndex = min(model.performance.pageIndex, max(0, pages.count - 1))
             model.savePages()

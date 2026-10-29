@@ -129,7 +129,6 @@ struct HandsTile: View {
                 Button("Expand Camera", systemImage: "arrow.up.left.and.arrow.down.right") { model.presentStage(.hands) }
                     .labelStyle(.iconOnly).buttonStyle(.plain).frame(width: 44, height: 44)
                 Button(model.performance.armed ? "Disarm" : "Arm", systemImage: model.performance.armed ? "stop.circle" : "hand.raised") {
-                    if model.performance.method != .hands { model.performance.method = .hands }
                     model.arm(!model.performance.armed)
                 }
                 .labelStyle(.iconOnly).buttonStyle(.plain).frame(width: 44, height: 44)

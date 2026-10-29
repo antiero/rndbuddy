@@ -32,6 +32,7 @@ enum StageText {
 struct StageSurface: ViewModifier {
     @Environment(\.stageGhost) private var ghost
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorSchemeContrast) private var contrast
     var active = false
     var tint = Design.stageInk
     var radius: CGFloat = 16
@@ -40,7 +41,7 @@ struct StageSurface: ViewModifier {
             .background(ghost && !active ? Color.clear : Design.scrim, in: .rect(cornerRadius: radius))
             .overlay {
                 RoundedRectangle(cornerRadius: radius)
-                    .strokeBorder(active ? tint : Design.stageLine, style: StrokeStyle(lineWidth: active ? 1.5 : 1, dash: ghost && !active ? [5, 4] : []))
+                    .strokeBorder(active ? tint : (contrast == .increased ? Color.white.opacity(0.65) : Design.stageLine), style: StrokeStyle(lineWidth: active ? 1.5 : 1, dash: ghost && !active ? [5, 4] : []))
             }
             .shadow(color: active ? tint.opacity(0.35) : .clear, radius: 14)
             .opacity(ghost && !active ? 0.5 : 1)
@@ -159,6 +160,7 @@ struct KeysControl: View {
         let root = snapshot.root ?? 0
         GeometryReader { geometry in
             let rows = geometry.size.height >= 150 ? 2 : 1
+            ScrollView(.horizontal) {
             VStack(spacing: 6) {
                 ForEach((0..<rows).reversed(), id: \.self) { row in
                     HStack(spacing: 6) {
@@ -167,6 +169,8 @@ struct KeysControl: View {
                         }
                     }
                 }
+            }
+            .frame(width: max(geometry.size.width, CGFloat(intervals.count) * 50), height: geometry.size.height)
             }
         }
         .accessibilityElement(children: .contain)
@@ -185,14 +189,14 @@ struct KeysControl: View {
             .gesture(DragGesture(minimumDistance: 0)
                 .onChanged { _ in
                     guard !down else { return }
-                    if performance.mode != .play { model.showTakeover = true } else { performance.key(control.id, degree: degree, down: true) }
+                    if performance.mode == .play || model.requestPlay() { performance.key(control.id, degree: degree, down: true) }
                 }
                 .onEnded { _ in performance.key(control.id, degree: degree, down: false) })
             .accessibilityElement()
             .accessibilityLabel(degree >= RNDProtocolCodec.intervals[(model.session.snapshot.scale ?? 0).clamped(0...19)].count ? "\(name), upper octave" : name)
             .accessibilityAddTraits(.isButton)
             .accessibilityAction {
-                guard performance.mode == .play else { model.showTakeover = true; return }
+                guard performance.mode == .play || model.requestPlay() else { return }
                 performance.key(control.id, degree: degree, down: true)
                 Task { @MainActor in try? await Task.sleep(for: .milliseconds(250)); performance.key(control.id, degree: degree, down: false) }
             }

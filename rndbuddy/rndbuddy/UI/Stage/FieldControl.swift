@@ -17,6 +17,9 @@ struct FieldControl: View {
                 for contact in contacts {
                     let point = CGPoint(x: contact.x * size.width, y: contact.y * size.height)
                     func circle(_ radius: CGFloat) -> Path { Path(ellipseIn: CGRect(x: point.x - radius, y: point.y - radius, width: radius * 2, height: radius * 2)) }
+                    var trail = Path()
+                    trail.move(to: CGPoint(x: size.width / 2, y: size.height / 2)); trail.addLine(to: point)
+                    context.stroke(trail, with: .color(tint.opacity(0.35)), lineWidth: 2)
                     context.fill(circle(30), with: .color(tint.opacity(0.16)))
                     context.stroke(circle(28), with: .color(tint), lineWidth: 1)
                     context.fill(circle(11), with: .color(.white))
@@ -42,6 +45,8 @@ struct FieldControl: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(control.title) field")
         .accessibilityRepresentation { accessibleSliders(selected) }
+        .opacity(performance.isOverridden(control) ? 0.55 : 1)
+        .accessibilityHint(performance.isOverridden(control) ? "Overridden by another control" : "")
         .contextMenu { Button("Release All Notes") { performance.cancel(); model.session.releaseAll() } }
     }
     private func xLabel(_ selected: Int) -> String {

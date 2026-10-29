@@ -28,7 +28,8 @@ struct HandsBackdrop: View {
                 VStack(spacing: 12) {
                     Label(model.hands.error ?? "Camera preview", systemImage: "video.slash")
                     Button("Start Camera") { Task { await model.hands.start() } }
-                }.padding().background(.regularMaterial, in: .rect(cornerRadius: 16))
+                    if model.hands.error != nil { CameraSettingsButton() }
+                }.font(.callout).frame(maxWidth: 300).padding().background(.regularMaterial, in: .rect(cornerRadius: 16))
             }
         }.clipped()
     }

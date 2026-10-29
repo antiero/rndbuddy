@@ -17,6 +17,7 @@ struct PerformanceLayer: View {
             ZStack(alignment: .topLeading) {
                 if blocksBackground { Color.clear.contentShape(.rect).gesture(DragGesture(minimumDistance: 0).onChanged { _ in }).accessibilityHidden(true) }
                 ForEach(flow.placements.filter { placement in
+                    if layout == .phonePortrait && page.controls.first(where: { $0.id == placement.controlID })?.kind == .tracks { return false }
                     let rect = frame(placement, cell: cell, kind: page.controls.first { $0.id == placement.controlID }?.kind ?? .trigger)
                     return rect.width >= 44 && rect.height >= 44
                 }, id: \.controlID) { placement in
@@ -73,7 +74,7 @@ struct StageControlView: View {
     @Bindable var model: AppModel
     let control: ControlSpec
     var body: some View {
-        switch control.kind {
+        Group { switch control.kind {
         case .xy where control.bindings.count == 2: FieldControl(model: model, control: control)
         case .fader where control.bindings.count == 1: FaderControl(model: model, control: control)
         case .trigger, .toggle: TriggerControl(model: model, control: control)
@@ -82,7 +83,9 @@ struct StageControlView: View {
         case .patchBar: StagePatchBar(model: model)
         case .camera: HandsTile(model: model)
         default: Color.clear.accessibilityHidden(true)
-        }
+        } }
+        .disabled(!FirmwareCapabilities.supports(control, firmware: model.session.snapshot.firmware))
+        .accessibilityHint(FirmwareCapabilities.reason(control, firmware: model.session.snapshot.firmware) ?? "")
     }
 }
 
@@ -107,6 +110,11 @@ struct StagePageHeader: View {
         .labelStyle(.iconOnly)
         .buttonStyle(.plain)
         .frame(minHeight: 44)
+        .contentShape(.rect)
+        .gesture(DragGesture(minimumDistance: 30).onEnded { value in
+            guard abs(value.translation.width) > abs(value.translation.height) else { return }
+            performance.pageIndex = (performance.pageIndex + (value.translation.width < 0 ? 1 : -1)).clamped(0...max(0, performance.pages.count - 1))
+        })
     }
 }
 

@@ -30,7 +30,7 @@ struct StageView: View {
                     VStack(spacing: 0) {
                         visuals.frame(height: geometry.size.height * (layout == .phonePortrait ? 0.34 : (model.portraitFraction > 0 ? model.portraitFraction : 0.42)))
                         if layout == .padPortrait {
-                            Capsule().fill(.secondary).frame(width: 44, height: 4).frame(maxWidth: .infinity).frame(height: 20)
+                            Capsule().fill(.secondary).frame(width: 44, height: 4).frame(maxWidth: .infinity).frame(height: 44)
                                 .contentShape(.rect)
                                 .gesture(DragGesture().onChanged { value in
                                     let base = model.portraitFraction > 0 ? model.portraitFraction : 0.42
@@ -38,7 +38,7 @@ struct StageView: View {
                                 }).accessibilityLabel("Visuals height")
                                 .accessibilityAdjustableAction { direction in model.portraitFraction = ((model.portraitFraction > 0 ? model.portraitFraction : 0.42) + (direction == .increment ? 0.05 : -0.05)).clamped(0.2...0.65) }
                         }
-                        controls(layout, header: layout == .phonePortrait)
+                        controls(layout, header: true)
                     }
                 case .sideBySide:
                     HStack(spacing: 0) {
@@ -69,7 +69,7 @@ struct StageView: View {
         .focusEffectDisabled()
         .onKeyPress(phases: [.down, .up], action: handleKey)
         .confirmationDialog("Play this track?", isPresented: $model.showTakeover, titleVisibility: .visible) {
-            Button("Take over track \(model.session.selectedTrack + 1)") { model.performance.mode = .play }
+            Button("Take over track \(model.session.selectedTrack + 1)") { model.confirmPlay() }
             Button("Cancel", role: .cancel) { }
         } message: { Text("Playing notes stops this track’s generated sequence. The other tracks keep running. Generate or recall a patch to restore it.") }
         .onDisappear { model.performance.cancelTouches() }
@@ -87,9 +87,17 @@ struct StageView: View {
             if model.overlay != .off || model.editingStage {
                 VStack(spacing: 10) {
                     if model.performance.mode == .play { TakeoverBanner(model: model).frame(maxWidth: 640) }
-                    PerformanceLayer(model: model, layout: layout, editor: model.stageEditor)
+                    // There is nothing to shield before Pixels has been enabled.
+                    // Leaving the native setup card reachable lets its Enable and
+                    // Explore Demo actions work even while the Stage controls are shown.
+                    PerformanceLayer(
+                        model: model,
+                        layout: layout,
+                        editor: model.stageEditor,
+                        blocksBackground: model.pixels.permission && !model.pixels.external
+                    )
                 }
-                .padding(.horizontal, 16).padding(.top, floatingChrome ? 76 : 16).padding(.bottom, 12)
+                .padding(.horizontal, 16).padding(.top, floatingChrome ? 60 : 16).padding(.bottom, 6)
                 .environment(\.stageGhost, model.overlay == .ghost)
             } else {
                 Button("Show Controls", systemImage: "square.3.layers.3d") { model.overlay = .show }

@@ -96,7 +96,12 @@ enum LayoutClass: String, Codable, CaseIterable, Sendable, CodingKeyRepresentabl
     }
 }
 
-enum PageError: Error, Equatable { case invalid(String) }
+enum PageError: LocalizedError, Equatable {
+    case invalid(String)
+    var errorDescription: String? {
+        switch self { case .invalid(let reason): "This layout could not be saved: \(reason)." }
+    }
+}
 
 struct PerformancePage: Codable, Identifiable, Equatable, Sendable {
     static let maxControls = 64
@@ -177,7 +182,16 @@ extension PerformancePage {
     static var defaults: [PerformancePage] { [drift().withStagePlacements(), swell().withStagePlacements(), keys().withStagePlacements()] }
     /// One page per saved mapping when migrating the library.
     init(legacy mapping: PerformanceMapping, name: String) {
-        self = .drift(mapping); self.name = name
+        var safe = mapping
+        for path in [\PerformanceMapping.x, \PerformanceMapping.y] {
+            safe[keyPath: path].minimum = safe[keyPath: path].minimum.clamped(0...1)
+            safe[keyPath: path].maximum = safe[keyPath: path].maximum.clamped(0...1)
+            safe[keyPath: path].smoothing = safe[keyPath: path].smoothing.clamped(0...0.95)
+            safe[keyPath: path].deadZone = safe[keyPath: path].deadZone.clamped(0...0.1)
+        }
+        self = .drift(safe)
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.name = trimmed.isEmpty ? "Imported mapping" : String(trimmed.prefix(80))
     }
     private static func binding(_ axis: AxisMapping) -> ControlBinding { ControlBinding(axis.target, axis: axis, sources: [.touch, .hands, .motion]) }
 }

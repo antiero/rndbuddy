@@ -33,7 +33,8 @@ import Observation
     /// Set by the stage: split layouts keep controls beside the visuals, so overlay visibility does not apply.
     var stageSplit = false
     init() {
-        let testing=NSClassFromString("XCTestCase") != nil
+        let preview = ProcessInfo.processInfo.arguments.contains("--stage-preview")
+        let testing = NSClassFromString("XCTestCase") != nil || preview
         let session = testing ? DeviceSession(transport:FakeMIDITransport(),preferences:nil) : DeviceSession()
         self.session = session
         performance = PerformanceController(session: session)
@@ -56,8 +57,30 @@ import Observation
             guard let self else { return }
             self.performance.updateSensor(contacts, source: .motion)
         }
-        if pixels.permission && !testing { pixels.load() }
+        if pixels.permission && (!testing || preview) { pixels.load() }
         if ProcessInfo.processInfo.arguments.contains("--demo") { session.startDemo() }
+        if ProcessInfo.processInfo.arguments.contains("--stage-preview") {
+            performance.pages = PerformancePage.defaults; performance.pageIndex = 0
+        }
+    }
+    func importLibraryFile(_ url: URL) throws {
+        let access = url.startAccessingSecurityScopedResource()
+        defer { if access { url.stopAccessingSecurityScopedResource() } }
+        var incoming: [PerformancePage] = []
+        if url.pathExtension.lowercased() != "csv" {
+            let data = try Data(contentsOf: url)
+            guard data.count <= 32_000_000 else { throw PatchArchive.ArchiveError.invalid }
+            incoming = try PatchArchive.decode(data).pages?.map { $0.copied() } ?? []
+            guard performance.pages.count + incoming.count <= 1_000 else { throw PatchArchive.ArchiveError.invalid }
+            for page in incoming { try page.validate() }
+            guard incoming.isEmpty || pageStore != nil else { throw PageError.invalid("Stage page storage is unavailable") }
+        }
+        guard let library else { throw PageError.invalid("Library storage is unavailable") }
+        try library.importFile(url)
+        if !incoming.isEmpty {
+            let pages = performance.pages + incoming
+            try pageStore?.replace(pages); performance.pages = pages
+        }
     }
     func savePages() {
         do { try pageStore?.replace(performance.pages) }
@@ -67,6 +90,19 @@ import Observation
         performance.cancelTouches()
         stagePresentation = presentation
         if presentation == .hands { Task { await hands.start() } }
+    }
+    /// Starts the local RND demo and its companion Pixels display together.
+    func startPixelsDemo() {
+        session.startDemo()
+        pixels.allow()
+    }
+    @discardableResult func requestPlay() -> Bool {
+        if UserDefaults.standard.bool(forKey: "rndbuddy.takeoverConfirmed") { performance.mode = .play; return true }
+        showTakeover = true; return false
+    }
+    func confirmPlay() {
+        UserDefaults.standard.set(true, forKey: "rndbuddy.takeoverConfirmed")
+        performance.mode = .play
     }
     func changeInput(_ method: InputMethod) {
         hands.stop(); motion.stop(); performance.method = method

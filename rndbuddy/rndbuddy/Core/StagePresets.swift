@@ -21,14 +21,15 @@ extension PerformancePage {
                 if let tracks = controls.first(where: { $0.kind == .tracks }) { add(tracks, 0, rows - 1, columns / 2, 1) }
                 if let patch = controls.first(where: { $0.kind == .patchBar }) { add(patch, columns / 2, rows - 1, columns / 2, 1) }
             } else {
-                for (i, fader) in faders.enumerated() { add(fader, i * 2, 1, 2, max(3, rows / 2)) }
+                for (i, fader) in faders.enumerated() { add(fader, i * 2, layout == .phoneLandscape ? 0 : 1, 2, layout == .phoneLandscape ? 4 : max(3, rows / 2)) }
                 let x = columns * 3 / 5
                 if let field = controls.first(where: { $0.kind == .xy || $0.kind == .keys }) {
                     if layout == .padLandscape { add(field, 4, 2, columns - 8, rows - 4) }
-                    else { add(field, x, 1, columns - x, max(3, rows / 2)) }
+                    else { add(field, x, layout == .phoneLandscape ? 0 : 1, columns - x, layout == .phoneLandscape ? 4 : max(3, rows / 2)) }
                 }
                 for (i, trigger) in triggers.enumerated() {
                     if layout == .padLandscape { add(trigger, columns - 4 + (i % 2) * 2, 3 + (i / 2) * 2, 2, 2) }
+                    else if layout == .phoneLandscape { add(trigger, columns - 8 + i * 2, 4, 2, 1) }
                     else { add(trigger, x + i * 2, min(rows - 2, 1 + max(3, rows / 2)), 2, 1) }
                 }
                 if let tracks = controls.first(where: { $0.kind == .tracks }) { add(tracks, 0, rows - 1, columns / 2, 1) }

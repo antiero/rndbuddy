@@ -50,6 +50,34 @@ import Testing
         controller.updateSensor([], source: .hands)
         #expect(transport.sent.last?.bytes.first == 0x81)
     }
+    @Test func presentationReleasePreservesSensorsAndLossDoesNotCancelTouch() {
+        let (controller, transport) = ControlRouterTests().fixture()
+        controller.mode = .play; controller.playYAxis = .velocity; controller.armed = true
+        let id = controller.primaryField!.id
+        controller.updateSensor([Contact(id: "hand", x: 0.7, y: 0.2)], source: .hands)
+        controller.cancelTouches()
+        #expect(controller.touches[id]?.first?.id == "hand")
+        controller.update(id, [Contact(id: "finger", x: 0.3, y: 0.5)])
+        let count = transport.sent.count
+        controller.updateSensor([], source: .hands)
+        #expect(controller.touches[id]?.first?.id == "finger")
+        #expect(transport.sent.count == count)
+        controller.cancelTouches()
+        #expect(controller.touches[id] == nil)
+        #expect(transport.sent.last?.bytes.first == 0x81)
+    }
+    @Test func holdSuppressesNamedFeaturesUntilReleased() {
+        let (controller, transport) = ControlRouterTests().fixture()
+        let fader = ControlSpec(kind: .fader, title: "Height", bindings: [ControlBinding(.masterVolume, sources: [.rightHeight])])
+        controller.pages = [PerformancePage(name: "Hands", controls: [fader])]
+        controller.armed = true; controller.held = true
+        let count = transport.sent.count
+        controller.updateFeatures([.rightHeight: 0.9])
+        #expect(transport.sent.count == count)
+        controller.held = false
+        controller.updateFeatures([.rightHeight: 0.9])
+        #expect(transport.sent.count > count)
+    }
     @Test func localPagesSeedAndMigrateOnce() throws {
         let store = try PageStore(inMemory: true)
         let mapping = MappingDocument(name: "Legacy", mapping: PerformanceMapping())

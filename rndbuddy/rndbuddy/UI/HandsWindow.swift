@@ -15,12 +15,11 @@ struct HandsControls: View {
                     .help("Hide the preview while keeping hand tracking active")
                 Button("Expand Camera", systemImage: "arrow.up.left.and.arrow.down.right") { model.presentStage(.hands) }
                 Spacer()
-                Button(model.performance.armed && model.performance.method == .hands ? "Disarm Hands" : "Arm Hands") {
-                    if model.performance.method != .hands { model.performance.method = .hands }
+                Button(model.performance.armed ? "Disarm Hands" : "Arm Hands") {
                     model.arm(!model.performance.armed)
                 }.buttonStyle(.borderedProminent)
             }
-            if let error = model.hands.error { Text(error).font(.caption).foregroundStyle(.secondary) }
+            if let error = model.hands.error { Text(error).font(.caption).foregroundStyle(.secondary); CameraSettingsButton() }
         }.padding(16)
     }
 }
