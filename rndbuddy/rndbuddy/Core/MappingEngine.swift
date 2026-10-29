@@ -40,13 +40,16 @@ struct PerformanceMapping: Codable, Equatable, Sendable {
     var y = AxisMapping(target: .reverb)
 }
 struct MappingEngine: Sendable {
-    private var previous: [MappingTarget: Double] = [:]
+    private var previous: [String: Double] = [:]
     mutating func value(_ input: Double, axis: AxisMapping) -> Int? {
-        let target = axis.mapped(input)
-        let old = previous[axis.target] ?? target
-        let next = old + (target - old) * (1 - axis.smoothing.clamped(0...0.95))
-        guard previous[axis.target] == nil || abs(next - old) >= axis.deadZone else { return nil }
-        previous[axis.target] = next
+        value(mapped: axis.mapped(input), key: axis.target.rawValue, smoothing: axis.smoothing, deadZone: axis.deadZone)
+    }
+    /// Smooths an already mapped 0...1 value; `key` keeps each control binding's history separate.
+    mutating func value(mapped target: Double, key: String, smoothing: Double, deadZone: Double) -> Int? {
+        let old = previous[key] ?? target
+        let next = old + (target - old) * (1 - smoothing.clamped(0...0.95))
+        guard previous[key] == nil || abs(next - old) >= deadZone else { return nil }
+        previous[key] = next
         return Int((next * 127).rounded()).clamped(0...127)
     }
     mutating func reset() { previous.removeAll() }

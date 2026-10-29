@@ -43,8 +43,8 @@ struct PerformanceLayout: Equatable, Sendable {
         case .trigger: return (2, 2)
         case .toggle: return (2, 1)
         case .camera: return (3, 2)
-        case .tracks: return (min(c, 8), 1)
-        case .patchBar: return (min(c, 8), 1)
+        case .tracks: return (min(c, max(8, c / 2)), 1)
+        case .patchBar: return (min(c, 8), r >= 10 ? 2 : 1)
         }
     }
     private static func place(_ control: ControlSpec, grid: (columns: Int, rows: Int), taken: [Placement]) -> Placement? {

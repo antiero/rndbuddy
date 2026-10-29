@@ -18,6 +18,11 @@ import Observation
     var showAssignments = false
     var showSave = false
     var showTakeover = false
+    var overlay = OverlayVisibility(rawValue: UserDefaults.standard.string(forKey: "rndbuddy.overlay") ?? "") ?? .show {
+        didSet { UserDefaults.standard.set(overlay.rawValue, forKey: "rndbuddy.overlay") }
+    }
+    /// Set by the stage: split layouts keep controls beside the visuals, so overlay visibility does not apply.
+    var stageSplit = false
     init() {
         let testing=NSClassFromString("XCTestCase") != nil
         let session = testing ? DeviceSession(transport:FakeMIDITransport(),preferences:nil) : DeviceSession()
@@ -50,6 +55,10 @@ import Observation
         hands.stop(); motion.stop(); performance.background()
         // User-started audio monitoring intentionally remains active.
     }
+}
+enum OverlayVisibility: String, CaseIterable, Identifiable {
+    case off = "Off", ghost = "Ghost", show = "Show"
+    var id: String { rawValue }
 }
 enum AppDestination: String, CaseIterable, Identifiable {
     case perform = "Perform", library = "Library", settings = "Settings"

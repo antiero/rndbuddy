@@ -139,7 +139,7 @@ extension PerformancePage {
     /// Matches today's Perform screen so existing users lose nothing.
     static func drift(_ legacy: PerformanceMapping = PerformanceMapping()) -> PerformancePage {
         PerformancePage(name: "Drift", controls: [
-            ControlSpec(kind: .xy, title: "Field", bindings: [binding(legacy.x), binding(legacy.y)], playYAxis: legacy.playYAxis),
+            ControlSpec(kind: .xy, title: "Field", bindings: [binding(legacy.x), binding(legacy.y)], playYAxis: legacy.playYAxis ?? .volume),
             ControlSpec(kind: .fader, title: "Vol", bindings: [ControlBinding(.masterVolume)]),
             ControlSpec(kind: .fader, title: "Verb", bindings: [ControlBinding(.masterReverb)]),
             ControlSpec(kind: .trigger, title: "Hold", action: .hold),
@@ -154,12 +154,25 @@ extension PerformancePage {
             ControlSpec(kind: .patchBar, title: "Patch"),
         ])
     }
-    static var defaults: [PerformancePage] { [drift(), keys()] }
+    /// Per-track volume faders plus the track actions from the mixer.
+    static func swell() -> PerformancePage {
+        PerformancePage(name: "Swell", controls: (0..<4).map { track in
+            ControlSpec(kind: .fader, title: "T\(track + 1)", bindings: [ControlBinding(.volume, scope: .fixed(track))])
+        } + [
+            ControlSpec(kind: .fader, title: "Verb", bindings: [ControlBinding(.reverb)]),
+            ControlSpec(kind: .trigger, title: "Mute", action: .mute),
+            ControlSpec(kind: .trigger, title: "Freeze", action: .freeze),
+            ControlSpec(kind: .trigger, title: "Reroll", action: .reroll),
+            ControlSpec(kind: .tracks, title: "Tracks"),
+            ControlSpec(kind: .patchBar, title: "Patch"),
+        ])
+    }
+    static var defaults: [PerformancePage] { [drift(), swell(), keys()] }
     /// One page per saved mapping when migrating the library.
     init(legacy mapping: PerformanceMapping, name: String) {
         self = .drift(mapping); self.name = name
     }
-    private static func binding(_ axis: AxisMapping) -> ControlBinding { ControlBinding(axis.target, axis: axis) }
+    private static func binding(_ axis: AxisMapping) -> ControlBinding { ControlBinding(axis.target, axis: axis, sources: [.touch, .hands, .motion]) }
 }
 
 /// Single source of truth for firmware-gated controls; the router, inspector and unavailable state all ask here.
