@@ -1,0 +1,22 @@
+rndbuddy
+Copyright 2026 Antony Nasce
+
+Original rndbuddy contributions are licensed under the Apache License, Version 2.0.
+Third-party portions retain the terms stated in rndbuddy/docs/ThirdPartyNotices.md.
+
+JG-RND: https://github.com/jgharding/JG-RND
+Copyright (c) 2026 jgharding. MIT License.
+The native implementation adapts JG protocol encodings, CSV compatibility and
+firmware interaction behaviour. See the full MIT notice in the source acknowledgements.
+No RND firmware binary is included.
+
+MIDIWeb and MIDIVision: projects by Antony Nasce.
+The WebMIDI bridge draws on MIDIWeb design lessons. The repository-local
+MIDIVisionHandTrackingCore package adapts MIDIVision hand tracking sources.
+
+RND pixels: https://pixels.cymaforma.com, hosted by Cyma Forma.
+The app loads the live website; its assets are not bundled in this repository.
+RND and Pixels remain the work of their respective owners. This independent
+project does not imply their affiliation or endorsement.
+
+This NOTICE is informational and does not replace or modify any licence terms.

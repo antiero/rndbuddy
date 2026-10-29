@@ -1,3 +1,5 @@
+// JG CSV compatibility adapts jgharding/JG-RND (MIT, copyright 2026 jgharding).
+// Full upstream licence: docs/ThirdPartyNotices.md in the app project.
 import Foundation
 
 struct PatchDocument: Codable, Sendable, Equatable, Identifiable {

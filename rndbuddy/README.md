@@ -16,8 +16,8 @@ reuse some SysEx opcodes for different operations.
 Settings → Demo provides simulated MIDI without producing sound or sending
 hardware messages. A development launch with `--demo` starts the same mode.
 
-This app directory is a separate Git repository created with the Xcode project.
-Run Git commands here to inspect the native application's changes.
+The standalone Git repository is the parent directory. The Xcode project and
+Swift package remain together in this app directory.
 
 ## Implemented
 
@@ -83,4 +83,9 @@ remote control are not included. Official firmware engine/track edits can take
 patches off-seed; the UI identifies approximate recall where known. General
 browser features and Pixels audio/camera capture are deliberately not bridged.
 
-[Source acknowledgements](docs/ThirdPartyNotices.md)
+## Licence
+
+Original rndbuddy contributions use [Apache 2.0](../LICENSE). Adapted third-party
+portions retain their terms. See [NOTICE](../NOTICE) and the full
+[source acknowledgements](docs/ThirdPartyNotices.md). No RND firmware or Pixels
+website assets are included, and their rights are not granted by this licence.

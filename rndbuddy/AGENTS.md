@@ -13,10 +13,10 @@ communication and a calm interface.
 - Firmware flashing, WebUSB and bootloader development are out of scope.
 - Support official firmware first. Add JG firmware features through explicit
   capability detection; do not assume the protocols are interchangeable.
-- Treat `../../design/mockups/04-pixels-native.png` as the starting layout,
-  `01-tactile.png` as the light visual direction, and `02-field.png` as a hand
-  and motion interaction study. Mockups are inspiration, not implementation
-  specifications or proof that pictured parameters are supported.
+- Follow the agreed Pixels + Native layout, restrained Tactile styling and
+  expressive Field input direction. The original concept mockups are not
+  included in this standalone repository. Concepts are inspiration, not proof
+  that pictured parameters are supported.
 
 ## Project baseline and decisions
 
@@ -87,7 +87,7 @@ communication and a calm interface.
 ## MIDIWeb learnings and Pixels integration
 
 - Reference the sibling MIDIWeb repository at `../MIDIWeb` relative to the
-  JG-RND repository root. Useful sources are `MIDI/WebMidiBridge.swift`,
+  standalone rndbuddy repository root. Useful sources are `MIDI/WebMidiBridge.swift`,
   `MIDI/WebMidiAccessCoordinator.swift`, `Browser/JavaScript/WebMidiJS.swift`,
   `MIDI/MIDIByteStreamParser.swift` and their tests.
 - Inspect current source before reuse. Extract the smallest maintainable bridge

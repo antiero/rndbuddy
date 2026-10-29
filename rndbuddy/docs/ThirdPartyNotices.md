@@ -2,18 +2,15 @@
 
 ## JG-RND
 
-RND SysEx encodings, CSV compatibility and JG firmware behaviour are adapted
-from https://github.com/jgharding/JG-RND. No firmware binary is included in
-rndbuddy. The following licence covers the original JG editor/patch code only.
+RND SysEx encodings, CSV compatibility and JG firmware interaction behaviour
+are adapted from [JG-RND](https://github.com/jgharding/JG-RND), by jgharding.
+The adaptations include the native protocol codec, patch archive CSV handling
+and device-session recall logic. These are Swift implementations; the upstream
+Svelte/Electron editor is not a runtime dependency.
 
-MIT License below covers the JG-RND editor source code and the original
-patch code written by jgharding. It does NOT cover the RND synth firmware.
-
-The firmware files in public/firmware/ are based on Cyma Forma's RND firmware,
-which is Cyma Forma's work and belongs to them. A modified version is hosted
-here for flashing your own RND only. This repository does not grant you, and
-cannot grant any right to copy, redistribute or reuse that firmware.
-Do not redistribute it.
+The MIT notice below applies to the upstream editor and original patch-code
+portions. It does not cover Cyma Forma's RND firmware. No firmware binary is
+included in this repository, and this project grants no rights to that firmware.
 
 MIT License
 
@@ -50,3 +47,14 @@ RND pixels is hosted by Cyma Forma at https://pixels.cymaforma.com. rndbuddy
 loads that site live and retains its attribution. No site artwork, fonts or
 visual-engine assets are bundled or redistributed. Official MIDI commands
 are independently documented from the publicly delivered MIDI client.
+
+## Project licence and distribution
+
+Original rndbuddy contributions use the root [Apache 2.0 licence](../../LICENSE).
+These acknowledgements preserve the applicable upstream terms; they do not
+relicense the complete MIDIWeb or MIDIVision repositories or the Pixels site.
+Retain the full JG-RND MIT notice with copies or substantial portions of its
+code, including applicable notices shipped with application distributions.
+
+rndbuddy is an independent companion. References to Cyma Forma, RND and Pixels
+do not imply affiliation or endorsement or grant rights to their trademarks.
