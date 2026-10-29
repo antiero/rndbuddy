@@ -15,8 +15,11 @@ import SwiftUI
         .defaultSize(width: 1160, height: 820)
         .commands {
             CommandGroup(after: .newItem) {
-                Button("Generate Patch") { model.session.generate() }.keyboardShortcut("g", modifiers: .command).disabled(!model.session.canEdit)
+                Button("Generate Patch") { model.session.generate() }.keyboardShortcut("g", modifiers: .command).disabled(!model.session.canEdit || model.editingStage)
                 Button("Save Patch…") { model.showSave = true }.keyboardShortcut("s", modifiers: .command).disabled(model.session.snapshot.seed == nil)
+                Button(model.performance.held ? "Release Hold" : "Hold") { model.performance.held.toggle() }
+                    .keyboardShortcut(" ", modifiers: .command).disabled(model.editingStage)
+                Button("Edit Layout") { model.editingStage.toggle() }.keyboardShortcut("e", modifiers: .command)
                 Divider()
                 Button("Fill External Screen") { model.pixels.setExternalPresentation(.fillScreen) }.disabled(!model.pixels.external)
                 Button("Floating Visuals Window") { model.pixels.setExternalPresentation(.floating) }.disabled(!model.pixels.external)

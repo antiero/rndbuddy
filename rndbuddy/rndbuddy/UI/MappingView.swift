@@ -30,7 +30,7 @@ struct MappingView: View {
     private func axis(_ name: String, binding: Binding<AxisMapping>) -> some View {
         Section(name) {
             Picker("Parameter", selection: binding.target) {
-                ForEach(MappingTarget.allCases.filter { !$0.deep || model.session.snapshot.firmware == .jg023 }) { target in Text(target.rawValue).tag(target) }
+                ForEach(MappingTarget.allCases.filter { FirmwareCapabilities.supports($0, firmware: model.session.snapshot.firmware) }) { target in Text(target.rawValue).tag(target) }
             }
             Toggle("Invert", isOn: binding.inverted)
             Slider(value: binding.minimum, in: 0...1) { Text("Minimum") }

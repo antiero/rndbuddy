@@ -94,6 +94,12 @@ enum RNDProtocolCodec {
         if firmware == .official14 { return message(0x1B, [UInt8(track)] + Array(names[index].utf8) + [0]) }
         return nil
     }
+    /// Scale degree to note; degrees past the scale length climb octaves.
+    static func degreeNote(_ step: Int, root: Int, scale: Int, octave: Int) -> Int {
+        let notes = intervals[scale.clamped(0...19)]
+        let step = max(0, step)
+        return ((octave + 1) * 12 + root + notes[step % notes.count] + 12 * (step / notes.count)).clamped(0...127)
+    }
     static func quantizedNote(x: Double, root: Int, scale: Int, octave: Int) -> Int {
         let notes = intervals[scale.clamped(0...19)]
         let step = Int((x.clamped(0...1) * Double(notes.count * 2 - 1)).rounded())

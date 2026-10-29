@@ -96,3 +96,19 @@ See [AudioDiagnostics.md](AudioDiagnostics.md) for the sampled Debug callback
 fault, vectorised replacement, clean 60-second RND USB stress results and the
 remaining audible/volume-overlay validation. Escape over the external stage
 now exits fill-screen mode into its floating window.
+
+## Play vertical expression — 29 October 2026
+
+Play now defaults to continuous track volume (CC7 on the selected takeover
+channel), with fixed note-on velocity. Assignments retains an explicit velocity
+at note-on option. RND documents per-track CC7 in its
+[MIDI manual](https://www.cymaforma.com/pages/rnd-synth-manual).
+
+Six new fake-transport tests verify same-pitch vertical movement without note
+retrigger, duplicate-CC suppression, full range including silence, shared volume
+for multiple contacts, restoration and preservation of later mixer edits,
+unknown initial levels, onset velocity and old/new mapping archive decoding.
+Mac suite succeeded (22 discovered; three hardware tests skipped), and iOS 18.5
+simulator suite succeeded (17 discovered; one hardware test skipped). This is
+MIDI-message and local persistence evidence; audible response on RND hardware
+has not been verified for this change.

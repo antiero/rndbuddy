@@ -38,7 +38,7 @@ struct SettingsView: View {
             Section {
                 Link("RND manual",destination:URL(string:"https://www.cymaforma.com/pages/rnd-synth-manual")!)
                 Link("JG-RND",destination:URL(string:"https://github.com/jgharding/JG-RND")!)
-                Text("rndbuddy · independent companion").font(.caption).foregroundStyle(.secondary)
+//                Text("rndbuddy · independent companion").font(.caption).foregroundStyle(.secondary)
             }
         }.formStyle(.grouped).navigationTitle("Settings")
     }

@@ -20,6 +20,7 @@ struct PatchArchive: Codable, Sendable {
     var version = 1
     var patches: [PatchDocument]
     var mappings: [MappingDocument]?
+    var pages: [PerformancePage]?
     static func decode(_ data: Data) throws -> Self {
         let result = try JSONDecoder().decode(Self.self, from: data)
         guard result.version == 1, result.patches.count <= 10_000 else { throw ArchiveError.invalid }
@@ -30,6 +31,8 @@ struct PatchArchive: Codable, Sendable {
                 guard [axis.minimum,axis.maximum,axis.smoothing,axis.deadZone].allSatisfy({ $0.isFinite && (0...1).contains($0) }) else { throw ArchiveError.invalid }
             }
         }
+        guard (result.pages?.count ?? 0) <= 1_000 else { throw ArchiveError.invalid }
+        for page in result.pages ?? [] { try page.validate() }
         return result
     }
     static func validate(_ snapshot: PatchSnapshot) throws {

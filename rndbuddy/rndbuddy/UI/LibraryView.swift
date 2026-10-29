@@ -63,7 +63,7 @@ struct LibraryView: View {
             }
         }
         .fileImporter(isPresented:$importing,allowedContentTypes:[.json,.commaSeparatedText]) { result in
-            do { try model.library?.importFile(result.get()) } catch { self.error=error.localizedDescription }
+            do { try model.importLibraryFile(result.get()) } catch { self.error=error.localizedDescription }
         }
         .fileExporter(isPresented:$exporting,document:file,contentType:exportType,defaultFilename:"rndbuddy-library") { result in if case .failure(let failure)=result { error=failure.localizedDescription } }
         .sheet(item:$editing) { patch in PatchDetailsEditor(patch:patch) { model.library?.save($0) } }
@@ -75,7 +75,7 @@ struct LibraryView: View {
     private func export(csv:Bool) {
         do {
             let patches=model.library?.patches ?? []
-            file=LibraryFile(data:csv ? Data(PatchCSV.encode(patches).utf8) : try JSONEncoder().encode(PatchArchive(patches:patches,mappings:try model.library?.mappings.map { try $0.document() })))
+            file=LibraryFile(data:csv ? Data(PatchCSV.encode(patches).utf8) : try JSONEncoder().encode(PatchArchive(patches:patches,mappings:try model.library?.mappings.map { try $0.document() }, pages: model.performance.pages)))
             exportType=csv ? .commaSeparatedText : .json; exporting=true
         } catch { self.error=error.localizedDescription }
     }
