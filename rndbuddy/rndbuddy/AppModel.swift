@@ -30,6 +30,10 @@ import Observation
     var overlay = OverlayVisibility(rawValue: UserDefaults.standard.string(forKey: "rndbuddy.overlay") ?? "") ?? .show {
         didSet { UserDefaults.standard.set(overlay.rawValue, forKey: "rndbuddy.overlay") }
     }
+    /// Keeps the portrait Pixels band out of the way without unloading its web view.
+    var pixelsVisible = UserDefaults.standard.object(forKey: "rndbuddy.pixelsVisible") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(pixelsVisible, forKey: "rndbuddy.pixelsVisible") }
+    }
     /// Set by the stage: split layouts keep controls beside the visuals, so overlay visibility does not apply.
     var stageSplit = false
     init() {

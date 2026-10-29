@@ -20,7 +20,7 @@ struct PixelsStage: View {
                         Label("Pixels is on your external display", systemImage: "display").font(.callout)
                         Button("Bring back") { model.pixels.returnToApp() }
                     } else {
-                        Text("RND pixels").font(.headline)
+//                        Text("RND pixels").font(.headline)
                         Text("Visuals by cyma forma").font(.caption).foregroundStyle(.secondary)
                         Button("Enable Pixels", systemImage: "sparkles") { model.pixels.allow() }.buttonStyle(.borderedProminent)
                             .help("Allow the Pixels website to exchange MIDI and SysEx with your selected RND")

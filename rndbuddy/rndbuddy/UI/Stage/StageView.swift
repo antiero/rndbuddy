@@ -28,8 +28,12 @@ struct StageView: View {
                 case .overlay: overlay(layout)
                 case .stacked:
                     VStack(spacing: 0) {
-                        visuals.frame(height: geometry.size.height * (layout == .phonePortrait ? 0.34 : (model.portraitFraction > 0 ? model.portraitFraction : 0.42)))
-                        if layout == .padPortrait {
+                        if model.pixelsVisible {
+                            visuals
+                                .frame(height: geometry.size.height * (layout == .phonePortrait ? 0.34 : (model.portraitFraction > 0 ? model.portraitFraction : 0.42)))
+                                .transition(.move(edge: .top).combined(with: .opacity))
+                        }
+                        if layout == .padPortrait && model.pixelsVisible {
                             Capsule().fill(.secondary).frame(width: 44, height: 4).frame(maxWidth: .infinity).frame(height: 44)
                                 .contentShape(.rect)
                                 .gesture(DragGesture().onChanged { value in
@@ -136,7 +140,12 @@ struct StageView: View {
                         Image(systemName: "shuffle").font(.title3).frame(width: 52, height: 52)
                             .background(Design.accent, in: .circle).foregroundStyle(.white)
                     }.buttonStyle(.plain).accessibilityLabel("Generate new patch").disabled(!model.session.canEdit || model.editingStage)
-                }.frame(height: 56).padding(.horizontal, 16).padding(.vertical, 6).background(Design.stageBackground)
+                }
+                .frame(height: 56)
+                .padding(.horizontal, 16)
+                .padding(.top, 6)
+                .padding(.bottom, 18)
+                .background(Design.stageBackground)
             }
         }
     }

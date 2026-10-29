@@ -15,7 +15,7 @@ struct ContentView: View {
             else if model.pixels.fullScreen { PixelsFullScreen(host:model.pixels) }
             else { NavigationSplitView(columnVisibility: $columnVisibility) {
                 VStack(alignment: .leading, spacing: 28) {
-                    Text("rndbuddy").font(.title2).bold().padding(.horizontal, 12).padding(.top, 28)
+                    //Text("rndbuddy").font(.title2).bold().padding(.horizontal, 12).padding(.top, 28)
                     List(AppDestination.allCases, selection: $model.destination) { destination in
                         Label(destination.rawValue, systemImage: destination.symbol).tag(destination)
                     }.listStyle(.sidebar)
@@ -78,7 +78,7 @@ struct ContentView: View {
     }
     private var performance: some View {
         StageView(model: model)
-            .navigationTitle(showsPagePicker ? model.performance.page.name : "rndbuddy")
+            .navigationTitle(showsPagePicker ? model.performance.page.name : "")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(model.stageSplit ? .visible : .hidden, for: .navigationBar, .tabBar)
@@ -94,6 +94,9 @@ struct ContentView: View {
                     }
                 }
                 ToolbarItem(placement: .automatic) { connectionButton }
+                if model.stageSplit {
+                    ToolbarItem(placement: .automatic) { pixelsVisibilityButton }
+                }
                 ToolbarItem(placement: .automatic) { Button("Edit Layout", systemImage: "pencil") { model.editingStage = true } }
                 ToolbarItemGroup(placement: .automatic) {
                     if !model.stageSplit {
@@ -142,6 +145,15 @@ struct ContentView: View {
             .frame(minHeight: 32)
         }.buttonStyle(.plain).accessibilityLabel(model.session.displayName)
     }
+    private var pixelsVisibilityButton: some View {
+        Button {
+            withAnimation(.snappy) { model.pixelsVisible.toggle() }
+        } label: {
+            Image(systemName: model.pixelsVisible ? "eye" : "eye.slash")
+        }
+        .accessibilityLabel(model.pixelsVisible ? "Hide Pixels visuals" : "Show Pixels visuals")
+        .accessibilityHint("Shows or hides the Pixels visual band")
+    }
     private var compact: Bool {
         #if os(iOS)
         sizeClass == .compact
@@ -158,7 +170,7 @@ struct PerformanceMenu: View {
     @Environment(\.openWindow) private var openWindow
     var body: some View {
         let performance = model.performance
-        Menu("Performance", systemImage: performance.armed ? "hand.raised.fill" : "hand.raised") {
+        Menu("Performance", systemImage: "slider.horizontal.3") {
             Picker("Field", selection: Binding(get: { performance.mode }, set: { mode in
                 if mode == .play { model.requestPlay() } else { performance.mode = mode }
             })) { ForEach(PerformanceMode.allCases, id: \.self) { Text($0.rawValue).tag($0) } }
