@@ -26,6 +26,10 @@ Swift package remain together in this app directory.
 - Official 1.4 and JGpatch-023 protocol profiles, with reported/requested state
   kept distinct. JG engine rerolls, exact reroll seeds, generation masks, deeper
   reverb and freeze are supported by the native editor.
+- Play defaults to horizontal pitch and continuous vertical track volume.
+  Assignments also offers velocity at note onset. Volume is shared by held notes;
+  the highest contact wins. Releasing restores the known previous track level
+  unless it has since been edited in the mixer.
 - Independent touch contacts, scale-aware playing, pointer/musical keyboard
   input, camera pinch control using MIDIVision's tracking core, and calibrated
   Core Motion input on supported iOS devices. Camera controls can float in a

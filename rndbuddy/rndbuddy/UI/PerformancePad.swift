@@ -38,7 +38,7 @@ struct PerformancePad: View {
                 }.allowsHitTesting(false).accessibilityHidden(true)
                 VStack {
                     HStack {
-                        Text(model.performance.mode == .play ? "Velocity" : model.performance.mapping.y.target.rawValue).font(.caption2)
+                        Text(model.performance.mode == .play ? model.performance.playYAxis.rawValue : model.performance.mapping.y.target.rawValue).font(.caption2)
                         Spacer()
                         if model.performance.held { Image(systemName: "pause.fill").accessibilityLabel("Holding") }
                     }
@@ -58,6 +58,12 @@ struct PerformancePad: View {
         .accessibilityRepresentation {
             VStack {
                 if model.performance.mode == .play {
+                    Slider(value: $accessibleY, in: 0...1) { Text(model.performance.playYAxis.rawValue) }
+                        .onChange(of: accessibleY) { _, value in
+                            if model.performance.playYAxis == .volume {
+                                model.session.setControl(7, value: Int((value * 127).rounded()), channel: model.session.selectedTrack + 2)
+                            }
+                        }
                     Stepper("Note degree \(accessibleDegree+1)",value:$accessibleDegree,in:0...13)
                     Button("Play selected note") { playAccessibleNote() }
                 } else { Group {
@@ -122,7 +128,10 @@ struct PerformancePad: View {
         let intervals=RNDProtocolCodec.intervals[snapshot.scale ?? 0]
         let note=((snapshot.octave+1)*12+(snapshot.root ?? 0)+intervals[accessibleDegree % intervals.count]+12*(accessibleDegree / intervals.count)).clamped(0...127)
         model.session.note(source:"accessibility",note:nil,track:model.session.selectedTrack)
-        model.session.note(source:"accessibility",note:note,track:model.session.selectedTrack)
+        if model.performance.playYAxis == .volume {
+            model.session.setControl(7, value: Int((accessibleY * 127).rounded()), channel: model.session.selectedTrack + 2)
+        }
+        model.session.note(source:"accessibility",note:note,velocity:model.performance.playYAxis == .volume ? 127 : Int(accessibleY * 126 + 1),track:model.session.selectedTrack)
         accessibleNoteTask=Task { @MainActor in
             try? await Task.sleep(for:.milliseconds(250))
             guard !Task.isCancelled else { return }

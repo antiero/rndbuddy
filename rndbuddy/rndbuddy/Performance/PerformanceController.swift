@@ -11,7 +11,15 @@ struct Contact: Identifiable, Equatable, Sendable { let id: String; var x: Doubl
     let session: DeviceSession
     var mode = PerformanceMode.modulate { didSet { cancel(); held = false } }
     var method = InputMethod.touch { didSet { cancel(); held = false; armed = false } }
-    var mapping = PerformanceMapping() { didSet { engine.reset() } }
+    var mapping = PerformanceMapping() {
+        willSet { if mode == .play { cancel() } }
+        didSet { engine.reset() }
+    }
+    var playYAxis: PlayYAxis {
+        get { mapping.playYAxis ?? .volume }
+        set { mapping.playYAxis = newValue }
+    }
+    private var playVolume: (track: Int, previous: Int?, last: Int, device: Int32?)?
     var held = false { didSet { if oldValue && !held { cancel() } } }
     var armed = false { didSet { if !armed { cancel() } } }
     private(set) var contacts: [Contact] = []
@@ -46,16 +54,38 @@ struct Contact: Identifiable, Equatable, Sendable { let id: String; var x: Doubl
                 }
             }
         } else {
+            if playYAxis == .volume { updatePlayVolume(limited) }
             for contact in limited {
                 let note = RNDProtocolCodec.quantizedNote(x: contact.x, root: session.snapshot.root ?? 0, scale: session.snapshot.scale ?? 0, octave: session.snapshot.octave)
-                let velocity = Int((1 - contact.y) * 110 + 17).clamped(1...127)
+                let velocity = playYAxis == .volume ? 127 : Int((1 - contact.y) * 126 + 1).clamped(1...127)
                 session.note(source: contact.id, note: note, velocity: velocity, track: session.selectedTrack)
                 notes[contact.id] = note
             }
         }
     }
+    private func updatePlayVolume(_ contacts: [Contact]) {
+        guard let height = contacts.map({ 1 - $0.y }).max() else { restorePlayVolume(); return }
+        let track = session.selectedTrack
+        let value = Int((height.clamped(0...1) * 127).rounded())
+        if let current = playVolume, current.track == track, current.last == value { return }
+        if let current = playVolume, current.track != track { restorePlayVolume() }
+        let previous: Int?
+        if let current = playVolume { previous = current.previous }
+        else { previous = session.snapshot.tracks[track].volume }
+        playVolume = (track, previous, value, session.connectedID)
+        session.setControl(7, value: value, channel: track + 2)
+    }
+    private func restorePlayVolume() {
+        guard let current = playVolume else { return }
+        playVolume = nil
+        // Don't overwrite a later mixer edit or send stale values to a new device.
+        guard current.device == session.connectedID, let previous = current.previous,
+              session.snapshot.tracks[current.track].volume == current.last else { return }
+        session.setControl(7, value: previous, channel: current.track + 2)
+    }
     func cancel() {
         for id in activeIDs { session.note(source: id, note: nil, track: session.selectedTrack) }
+        restorePlayVolume()
         activeIDs.removeAll(); notes.removeAll(); contacts = []; lastSensor = []
         engine.reset(); touchOwns = false
     }

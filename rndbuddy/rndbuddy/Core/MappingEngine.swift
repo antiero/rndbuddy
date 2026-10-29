@@ -1,6 +1,10 @@
 import Foundation
 
 enum PerformanceMode: String, Codable, CaseIterable, Sendable { case modulate = "Modulate", play = "Play" }
+enum PlayYAxis: String, Codable, CaseIterable, Sendable {
+    case volume = "Track volume"
+    case velocity = "Velocity at note onset"
+}
 enum InputMethod: String, CaseIterable, Sendable { case touch = "Touch", hands = "Hands", motion = "Motion" }
 enum MappingTarget: String, Codable, CaseIterable, Sendable, Identifiable {
     case volume = "Track volume", reverb = "Track reverb", masterVolume = "Master volume", masterReverb = "Master reverb", tone = "Reverb tone", decay = "Reverb decay"
@@ -30,6 +34,8 @@ struct AxisMapping: Codable, Equatable, Sendable {
     }
 }
 struct PerformanceMapping: Codable, Equatable, Sendable {
+    // Optional for archives/mappings saved before this control existed.
+    var playYAxis: PlayYAxis?
     var x = AxisMapping(target: .volume)
     var y = AxisMapping(target: .reverb)
 }
