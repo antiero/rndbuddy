@@ -33,6 +33,17 @@ struct PixelsStage: View {
                     if model.pixels.permission {
                         Menu {
                             Button("Full Screen",systemImage:"arrow.up.left.and.arrow.down.right") { if model.pixels.external { model.pixels.returnToApp() }; model.pixels.fullScreen = true }
+                            #if os(macOS)
+                            if model.pixels.external {
+                                Button("Fill External Screen", systemImage: "arrow.up.left.and.arrow.down.right") { model.pixels.setExternalPresentation(.fillScreen) }
+                                Button("Floating Visuals Window", systemImage: "macwindow") { model.pixels.setExternalPresentation(.floating) }
+                            }
+                            Menu("External Display") {
+                                ForEach(model.pixels.externalDisplays, id: \.self) { screen in
+                                    Button(screen.localizedName) { model.pixels.showExternal(on: screen, presentation: .fillScreen) }
+                                }
+                            }
+                            #endif
                             Button("Reload Pixels", systemImage: "arrow.clockwise") { model.pixels.load() }
                             Button(model.pixels.external ? "Return to App" : "Send to External Display", systemImage: "display") { model.pixels.toggleExternal() }
                         } label: { Image(systemName: "ellipsis").frame(width: 40,height: 40).background(.regularMaterial, in: .circle) }

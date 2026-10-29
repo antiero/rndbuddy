@@ -4,7 +4,7 @@ import AudioToolbox
 @MainActor enum AudioChannelRouter {
     /// Selects the RND pair from the native hardware stream with Apple's realtime
     /// matrix mixer. No input-bus mutation or realtime buffer allocations.
-    static func connect(engine: AVAudioEngine, sampleRate: Double, inputOffset: Int, dry: Bool, stats: AudioCaptureStats) async throws {
+    static func connect(engine: AVAudioEngine, sampleRate: Double, inputOffset: Int, dry: Bool, stats: AudioCaptureStats, recording: AudioRecordingSink) async throws {
         let source = engine.inputNode.outputFormat(forBus:0)
         guard let stereo = AVAudioFormat(standardFormatWithSampleRate:sampleRate,channels:2),
               Int(source.channelCount) >= inputOffset + (dry ? 4 : 2) else { throw AudioMonitor.MonitorError.route("Unsupported RND audio format.") }
@@ -13,7 +13,11 @@ import AudioToolbox
         engine.attach(mixer)
         engine.connect(engine.inputNode,to:mixer,format:source)
         engine.connect(mixer,to:engine.mainMixerNode,format:stereo)
-        mixer.installTap(onBus:0,bufferSize:512,format:stereo) { buffer,_ in stats.receive(buffer) }
+        recording.sampleRate = sampleRate
+        mixer.installTap(onBus:0,bufferSize:512,format:stereo) { buffer,_ in
+            stats.receive(buffer)
+            recording.receive(UnsafeMutableAudioBufferListPointer(buffer.mutableAudioBufferList), frames: Int(buffer.frameLength))
+        }
         engine.mainMixerNode.outputVolume = 0
         engine.prepare(); try engine.start() // Matrix volume parameters require initialised resources.
         let unit = mixer.audioUnit

@@ -11,6 +11,9 @@ import Observation
     let library: LibraryStore?
     var startupError: String?
     var destination = AppDestination.perform
+    var showHandsPanel = false
+    var showCameraPreview = true
+    var showCapture = false
     var showMixer = false
     var showAssignments = false
     var showSave = false

@@ -41,6 +41,14 @@ The repository-local MIDIVisionHandTrackingCore package is copied from Antony
 Nasce's MIDIVision project, with a synchronous capture-queue entry point added.
 These app-specific integrations do not import their full browser or UI.
 
+## xybuddy / TEBuddy
+
+Capture design was informed by Antony Nasce's xybuddy / TEBuddy implementation:
+separate monitoring gain, input meters, local takes and bounded asynchronous
+file writing. rndbuddy uses its own stereo recording sink with Apple's
+ExtAudioFile services; no OP-XY device protocol or capture implementation is
+imported as a dependency.
+
 ## RND pixels
 
 RND pixels is hosted by Cyma Forma at https://pixels.cymaforma.com. rndbuddy

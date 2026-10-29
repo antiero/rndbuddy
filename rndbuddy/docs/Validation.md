@@ -66,3 +66,33 @@ captured screen.
 
 No firmware was flashed and no build was distributed. Do not mark the whole v1
 hardware/release acceptance complete from the checks performed so far.
+
+## Capture and window updates — 29 October 2026
+
+- Native Mac suite succeeded: 13 discovered tests, 11 passed and two opt-in
+  hardware tests skipped. iOS 18.5 simulator suite succeeded: 11 discovered
+  tests, 10 passed and one opt-in hardware test skipped. These runs include new WAV channel/sample checks, file finalisation,
+  repeated takes, dry sums and oversized-callback rejection.
+- External window test ran against the connected SAMSUNG display. Screen and
+  window frames both measured `(-764, 982, 3008, 1692)` points; the live web view
+  measured `(0, 0, 3008, 1692)`. Switching to a resizable floating window and
+  returning the same web view passed. The live app's external output menus were
+  also exercised. This establishes native window sizing, not visual-engine
+  quality or frame pacing at every display scale.
+- In the running Mac app, Capture recorded and finalised 1,086,464 frames from
+  the RND USB route: 22.634667 seconds, stereo 48 kHz Float32 WAV, 8,691,712 audio
+  bytes. Monitoring was muted. The idle one-shot patch produced zero-valued
+  samples: this proves route/file operation, not audible signal quality.
+- The separate Hands window opened and its Preview toggle was exercised.
+  Camera tracking, physical iOS recording, screen unplug/replug during capture,
+  extended recording and audible monitoring still need hardware validation.
+- Running-interface captures: [Mac Capture](screenshots/mac-capture.png) and
+  [Mac Perform with Hands selected](screenshots/mac-perform-hands.png), plus
+  [iPhone simulator with the Capture toolbar](screenshots/iphone-perform-capture-toolbar.png).
+
+## Mac audio and external Escape diagnosis
+
+See [AudioDiagnostics.md](AudioDiagnostics.md) for the sampled Debug callback
+fault, vectorised replacement, clean 60-second RND USB stress results and the
+remaining audible/volume-overlay validation. Escape over the external stage
+now exits fill-screen mode into its floating window.

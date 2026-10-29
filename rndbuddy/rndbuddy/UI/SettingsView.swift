@@ -19,18 +19,8 @@ struct SettingsView: View {
                 Button("Refresh Devices",systemImage:"arrow.clockwise") { model.session.transport.refresh() }
                 Toggle("Demo",isOn:Binding(get:{model.session.demo},set:{ $0 ? model.session.startDemo() : model.session.connect(nil) }))
             }
-            Section("Listening") {
-                #if os(macOS)
-                Picker("Output",selection:Binding(get: { model.audio.outputID }, set: { model.audio.outputID = $0 })) {
-                    Text("System output").tag(UInt32(0))
-                    ForEach(model.audio.outputs) { output in Text(output.name).tag(output.id) }
-                }.disabled(model.audio.running)
-                #endif
-                Toggle("Monitor RND audio",isOn:Binding(get:{model.audio.running},set:{ value in
-                    if value { Task { await model.audio.start(profile:model.session.snapshot.firmware) } } else { model.audio.stop() }
-                })).disabled(!model.session.connected)
-                if model.audio.running { Slider(value:Binding(get:{Double(model.audio.gain)},set:{model.audio.gain=Float($0)}),in:0...1) { Text("Monitor volume") } }
-                Text(model.audio.error ?? model.audio.status).font(.caption).foregroundStyle(.secondary)
+            Section("Audio") {
+                Button("Capture", systemImage: "waveform") { model.showCapture = true }
             }
             Section("Visuals") {
                 Toggle("Allow Pixels MIDI and SysEx",isOn:Binding(get:{model.pixels.permission},set:{ $0 ? model.pixels.allow() : model.pixels.revoke() }))

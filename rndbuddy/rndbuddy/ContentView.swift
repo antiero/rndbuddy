@@ -14,7 +14,6 @@ struct ContentView: View {
                     List(AppDestination.allCases, selection: $model.destination) { destination in
                         Label(destination.rawValue, systemImage: destination.symbol).tag(destination)
                     }.listStyle(.sidebar)
-                    Text("RND companion").font(.caption).foregroundStyle(.secondary).padding(20).accessibilityHidden(true)
                 }.navigationSplitViewColumnWidth(min: 150, ideal: 180, max: 220)
             } detail: { destination } }
             #else
@@ -26,6 +25,7 @@ struct ContentView: View {
             #endif
         }
         .background(Design.background(scheme))
+        .sheet(isPresented: $model.showCapture) { CaptureView(model: model) }
         .sheet(isPresented: $model.showMixer) { MixerView(session: model.session) }
         .sheet(isPresented: $model.showAssignments) { MappingView(model: model) }
         .sheet(isPresented: $model.showSave) { SavePatchView(model: model) }
@@ -35,9 +35,10 @@ struct ContentView: View {
         .onChange(of:model.pixels.fullScreen) { _, value in
             if let window = NSApplication.shared.keyWindow, window.styleMask.contains(.fullScreen) != value { window.toggleFullScreen(nil) }
         }
+        .onReceive(NotificationCenter.default.publisher(for:NSApplication.didResignActiveNotification)) { _ in model.background() }
         .onReceive(NotificationCenter.default.publisher(for:NSWindow.didExitFullScreenNotification)) { _ in model.pixels.fullScreen=false }
         #endif
-        .onChange(of: phase) { _, phase in if phase != .active { model.background() } else { model.library?.reload() } }
+        .onChange(of: phase) { _, phase in if phase == .background { model.background() } else { model.library?.reload() } }
         .onChange(of: model.session.connectedID) { _, _ in model.background(); model.audio.stop() }
         .onChange(of: model.session.selectedTrack) { _, _ in model.performance.cancel(); model.session.releaseAll() }
         .alert("rndbuddy", isPresented: Binding(get: { model.session.error != nil }, set: { if !$0 { model.session.error = nil } })) {
@@ -73,6 +74,7 @@ struct ContentView: View {
                 }
                 ToolbarItemGroup(placement: .automatic) {
                     Button("Save Patch", systemImage: "bookmark") { model.showSave = true }.disabled(model.session.snapshot.seed == nil || model.library == nil)
+                    Button("Capture", systemImage: model.audio.recording ? "record.circle.fill" : "waveform") { model.showCapture = true }.help("Monitor and record RND USB audio")
                     Button("Mixer", systemImage: "slider.vertical.3") { model.showMixer = true }
                 }
             }

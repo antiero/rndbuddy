@@ -28,14 +28,19 @@ Swift package remain together in this app directory.
   reverb and freeze are supported by the native editor.
 - Independent touch contacts, scale-aware playing, pointer/musical keyboard
   input, camera pinch control using MIDIVision's tracking core, and calibrated
-  Core Motion input on supported iOS devices.
+  Core Motion input on supported iOS devices. Camera controls can float in a
+  separate Mac window or a movable panel on iOS; preview visibility is independent
+  from tracking.
 - Shared assignments, smoothing, inversion, range limits, dead zones, hold and
   note ownership. Modulate and Play are separate; entering Play asks before
   taking over a generated track.
 - Live RND pixels in a stable WKWebView, using an origin-scoped WebMIDI/SysEx
   bridge. Its own visual selector/control table remain available. Native full
-  screen and external-display transfer share the same web view.
-- Stereo USB audio monitoring, initially off. Mac uses a private drift-corrected
+  screen and external-display transfer share the same web view. Mac output can
+  fill a selected external screen or use a resizable floating window.
+- Stereo USB audio monitoring and native stereo WAV recording through Capture,
+  initially off. Recordings are saved locally and can be exported. Monitor volume
+  does not change recorded audio. Mac uses a private drift-corrected
   aggregate and direct Core Audio I/O; iOS uses AVAudioSession/AVAudioEngine.
   A four-channel device can use a labelled dry sum. Monitoring can continue in
   the background; hands/motion stop and gesture-owned notes are released.
@@ -78,7 +83,7 @@ explicit `TEST_RUNNER_RNDBUDDY_HARDWARE=1` and/or
 `TEST_RUNNER_RNDBUDDY_AUDIO=1` environment flags. The MIDI hardware test only
 queries firmware and patch state; the audio check sets monitor gain to zero.
 
-Firmware flashing, recording, a built-in synth, visionOS and live phone-to-Mac
+Firmware flashing, a built-in synth, visionOS and live phone-to-Mac
 remote control are not included. Official firmware engine/track edits can take
 patches off-seed; the UI identifies approximate recall where known. General
 browser features and Pixels audio/camera capture are deliberately not bridged.

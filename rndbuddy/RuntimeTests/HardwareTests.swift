@@ -44,5 +44,29 @@ import Testing
         #expect(monitor.captureStats.frameCount > 0)
         print("RNDBUDDY_AUDIO_CAPTURE",monitor.captureStats.frameCount,monitor.captureStats.peak)
     }
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["RNDBUDDY_AUDIO_DIAGNOSTICS"] == "1"))
+    func audioSurvivesMainActorStalls() async throws {
+        let monitor = AudioMonitor(); monitor.gain = 0
+        defer { monitor.stop() }
+        await monitor.start(profile: .jg023)
+        #expect(monitor.running)
+        let diagnostics = try #require(monitor.renderDiagnostics)
+        print("RNDBUDDY_AUDIO_ROUTE", monitor.audioRouteDescription)
+        // Deliberate main-actor stalls, interspersed with normal run-loop work.
+        // No notes, patch changes or speaker audio are produced by this test.
+        let end = Date.now.addingTimeInterval(60)
+        var stalls = 0
+        while Date.now < end {
+            let until = Date.now.addingTimeInterval(0.06)
+            while Date.now < until { _ = sqrt(Double(stalls + 1)) }
+            stalls += 1
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        print("RNDBUDDY_AUDIO_STRESS", "mainActorStalls=", stalls, diagnostics.snapshot)
+        #expect(monitor.running)
+        #expect(monitor.captureStats.frameCount > 48_000 * 50)
+        #expect(diagnostics.deadlineMisses == 0)
+        #expect(diagnostics.sampleTimeGaps == 0)
+    }
     #endif
 }

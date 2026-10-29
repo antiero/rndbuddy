@@ -18,9 +18,23 @@ import SwiftUI
                 Button("Generate Patch") { model.session.generate() }.keyboardShortcut("g", modifiers: .command).disabled(!model.session.canEdit)
                 Button("Save Patch…") { model.showSave = true }.keyboardShortcut("s", modifiers: .command).disabled(model.session.snapshot.seed == nil)
                 Divider()
+                Button("Fill External Screen") { model.pixels.setExternalPresentation(.fillScreen) }.disabled(!model.pixels.external)
+                Button("Floating Visuals Window") { model.pixels.setExternalPresentation(.floating) }.disabled(!model.pixels.external)
+                Button("Return Visuals to App") { model.pixels.returnToApp() }.disabled(!model.pixels.external)
+                Divider()
                 Button("Release All Notes") { model.performance.cancel(); model.session.releaseAll() }.keyboardShortcut(".", modifiers: .command)
             }
         }
+        #endif
+        #if os(macOS)
+        Window("Hands", id: "hands") {
+            HandsControls(model: model).tint(Design.accent)
+                .frame(minWidth: 280, minHeight: 90)
+                .onAppear { model.showHandsPanel = true }
+                .onDisappear { model.showHandsPanel = false }
+        }
+        .defaultSize(width: 360, height: 300)
+        .windowLevel(.floating)
         #endif
     }
     private var minimumWidth: CGFloat? {

@@ -3,6 +3,7 @@ import SwiftUI
 struct PerformancePad: View {
     @Bindable var model: AppModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.openWindow) private var openWindow
     @State private var accessibleX = 0.5
     @State private var accessibleY = 0.5
     @State private var accessibleDegree = 0
@@ -23,7 +24,7 @@ struct PerformancePad: View {
             }
             ZStack {
                 GridArtwork()
-                if model.performance.method == .hands && model.hands.running {
+                if model.performance.method == .hands && model.hands.running && model.showCameraPreview && !model.showHandsPanel {
                     CameraPreview(session:model.hands.captureSession,portrait:model.hands.portrait).opacity(0.3).allowsHitTesting(false).accessibilityHidden(true)
                 }
                 Canvas { context, size in
@@ -84,6 +85,14 @@ struct PerformancePad: View {
                 .accessibilityLabel("Input method")
                 .frame(maxWidth: 260)
                 Spacer(minLength: 8)
+                if model.performance.method == .hands {
+                    Button("Camera Controls", systemImage: "pip") {
+                        model.showHandsPanel = true
+                        #if os(macOS)
+                        openWindow(id: "hands")
+                        #endif
+                    }.labelStyle(.iconOnly).help("Open movable camera controls")
+                }
                 if model.performance.method != .touch {
                     Button(model.performance.armed ? "Disarm" : "Arm", systemImage: model.performance.armed ? "stop.circle" : "hand.raised") { model.arm(!model.performance.armed) }.buttonStyle(.bordered)
                     if model.performance.method == .motion { Button("Calibrate", systemImage: "scope") { model.motion.calibrate() }.labelStyle(.iconOnly) }

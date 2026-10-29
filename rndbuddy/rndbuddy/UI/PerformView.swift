@@ -28,6 +28,11 @@ struct PerformView: View {
                     .background(Design.background(scheme).opacity(0.97))
             }
         }
+        #if os(iOS)
+        .overlay(alignment: .topLeading) {
+            if model.showHandsPanel { FloatingHandsPanel(model: model) }
+        }
+        #endif
         .confirmationDialog("Play this track?", isPresented: $model.showTakeover, titleVisibility: .visible) {
             Button("Take over track \(model.session.selectedTrack + 1)") { model.performance.mode = .play }
             Button("Cancel", role: .cancel) { }

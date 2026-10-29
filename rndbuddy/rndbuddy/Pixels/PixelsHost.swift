@@ -17,6 +17,9 @@ import CoreAudio
     private var sysexGranted = false
     #if os(macOS)
     private var outputWindow: NSWindow?
+    private var externalKeys: Any?
+    private let windowDelegate = PixelsWindowDelegate()
+    private(set) var externalPresentation = ExternalPresentation.fillScreen
     private var screenObserver: NSObjectProtocol?
     private var externalScreenNumber: Int?
     #else
@@ -44,6 +47,9 @@ import CoreAudio
             Task { @MainActor in
                 guard let self, self.external, let number = self.externalScreenNumber else { return }
                 if !NSScreen.screens.contains(where:{ ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.intValue == number }) { self.returnToApp() }
+                else if self.externalPresentation == .fillScreen, let screen = self.outputWindow?.screen {
+                    self.outputWindow?.setFrame(screen.frame, display: true)
+                }
             }
         }
         #else
@@ -163,23 +169,74 @@ import CoreAudio
         if external { returnToApp(); return }
         #if os(macOS)
         guard let screen = NSScreen.screens.dropFirst().first else { error = "Connect a second display for visual output."; return }
-        let window = NSWindow(contentRect: screen.frame, styleMask: [.borderless], backing: .buffered, defer: false, screen: screen)
-        externalScreenNumber = (screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.intValue
-        webView.removeFromSuperview(); window.contentView = webView
-        window.isReleasedWhenClosed = false; window.orderFrontRegardless(); outputWindow = window
+        showExternal(on: screen, presentation: .fillScreen)
+        return
         #else
         guard let scene = externalScene else { error = "Connect an external display to send Pixels out."; return }
-        let controller = UIViewController(); controller.view = webView
         webView.removeFromSuperview()
+        let controller = UIViewController()
+        controller.view.backgroundColor = .black
+        controller.view.addSubview(webView)
+        webView.frame = controller.view.bounds
+        webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         let window = UIWindow(windowScene: scene); window.rootViewController = controller; window.isHidden = false; outputWindow = window
-        #endif
         external = true; placementChanged?()
+        #endif
     }
+    #if os(macOS)
+    enum ExternalPresentation: String { case fillScreen, floating }
+    var externalDisplays: [NSScreen] { NSScreen.screens.filter { $0 != NSScreen.screens.first } }
+    func setExternalPresentation(_ presentation: ExternalPresentation) {
+        guard let window = outputWindow, let screen = window.screen else { return }
+        showExternal(on: screen, presentation: presentation)
+    }
+    func showExternal(on screen: NSScreen, presentation: ExternalPresentation) {
+        fullScreen = false
+        webView.removeFromSuperview()
+        outputWindow?.orderOut(nil)
+        externalPresentation = presentation
+        externalScreenNumber = (screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.intValue
+        let style: NSWindow.StyleMask = presentation == .fillScreen ? [.borderless] : [.titled, .closable, .miniaturizable, .resizable]
+        let window = PixelsOutputWindow(contentRect: .zero, styleMask: style, backing: .buffered, defer: false, screen: screen)
+        window.title = "RND pixels"
+        window.isReleasedWhenClosed = false
+        window.backgroundColor = .black
+        window.level = presentation == .fillScreen ? .mainMenu + 1 : .floating
+        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        let container = NSView()
+        window.contentView = container
+        let frame = presentation == .fillScreen ? screen.frame : screen.visibleFrame.insetBy(dx: screen.visibleFrame.width * 0.1, dy: screen.visibleFrame.height * 0.1)
+        window.setFrame(frame, display: true)
+        webView.translatesAutoresizingMaskIntoConstraints = true
+        webView.frame = container.bounds
+        webView.autoresizingMask = [.width, .height]
+        container.addSubview(webView)
+        windowDelegate.onClose = { [weak self] in self?.returnToApp() }
+        window.delegate = windowDelegate
+        outputWindow = window
+        external = true
+        window.orderFrontRegardless()
+        if externalKeys == nil {
+            externalKeys = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                guard let self else { return event }
+                return self.handleExternalEscape(keyCode: event.keyCode, mouseLocation: NSEvent.mouseLocation) ? nil : event
+            }
+        }
+        placementChanged?()
+    }
+    @discardableResult func handleExternalEscape(keyCode: UInt16, mouseLocation: NSPoint) -> Bool {
+        guard keyCode == 53, external, externalPresentation == .fillScreen,
+              let window = outputWindow, window.frame.contains(mouseLocation) else { return false }
+        setExternalPresentation(.floating)
+        return true
+    }
+    #endif
     func returnToApp() {
         guard external else { return }
         webView.removeFromSuperview()
         #if os(macOS)
         outputWindow?.orderOut(nil)
+        if let externalKeys { NSEvent.removeMonitor(externalKeys); self.externalKeys = nil }
         #else
         outputWindow?.isHidden = true; outputWindow?.rootViewController = nil
         #endif
@@ -192,6 +249,13 @@ import CoreAudio
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) { owner?.userContentController(controller, didReceive: message) }
 }
 #if os(macOS)
+private final class PixelsOutputWindow: NSWindow {
+    override var canBecomeKey: Bool { true }
+}
+private final class PixelsWindowDelegate: NSObject, NSWindowDelegate {
+    var onClose: (() -> Void)?
+    func windowShouldClose(_ sender: NSWindow) -> Bool { onClose?(); return false }
+}
 struct PixelsWebView: NSViewRepresentable {
     let host: PixelsHost
     func makeNSView(context: Context) -> NSView { let container = NSView(); mount(container); return container }

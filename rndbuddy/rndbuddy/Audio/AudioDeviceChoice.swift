@@ -15,7 +15,7 @@ struct AudioDeviceChoice: Identifiable {
         var address = AudioObjectPropertyAddress(mSelector: selector, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
         var value: Unmanaged<CFString>?; var size = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
         let result = AudioObjectGetPropertyData(id, &address, 0, nil, &size, &value)
-        return result == noErr ? (value?.takeUnretainedValue() as String? ?? "") : ""
+        return result == noErr ? (value?.takeRetainedValue() as String? ?? "") : ""
     }
     static func channels(_ id: AudioDeviceID, input: Bool) -> Int {
         var address = AudioObjectPropertyAddress(mSelector: kAudioDevicePropertyStreamConfiguration, mScope: input ? kAudioDevicePropertyScopeInput : kAudioDevicePropertyScopeOutput, mElement: kAudioObjectPropertyElementMain)
