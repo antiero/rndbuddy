@@ -1,0 +1,40 @@
+{
+  "root": 8,
+  "tempo": 89,
+  "firmware": "jg023",
+  "scale": 17,
+  "octave": 4,
+  "reverbParameters": {},
+  "preservedCSV": {},
+  "type": 2,
+  "capturedAt": 814912760.829976,
+  "seed": 4240075533,
+  "generationMask": 7,
+  "tracks": [
+    {
+      "engine": "Acid (303)",
+      "muted": false,
+      "active": true,
+      "soloed": false,
+      "id": 0
+    },
+    {
+      "muted": false,
+      "active": false,
+      "soloed": false,
+      "id": 1
+    },
+    {
+      "muted": false,
+      "active": false,
+      "soloed": false,
+      "id": 2
+    },
+    {
+      "muted": false,
+      "active": false,
+      "soloed": false,
+      "id": 3
+    }
+  ]
+}
